@@ -1,11 +1,12 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace nv
 {
-
-    public class Dev
+    /// <summary>
+    /// Collection of tools, debug or otherwise, to improve the quality of life
+    /// </summary>
+    public partial class Dev
     {
         public static bool IsLayerInMask( LayerMask mask, GameObject go )
         {
@@ -41,7 +42,7 @@ namespace nv
             //This is a change from the 5.4 behaviour, which used the Object position as world.
             GameObject g = (GameObject)GameObject.Instantiate(obj,parent);
 #else
-        GameObject g = (GameObject)GameObject.Instantiate(obj,parent,false);
+            GameObject g = (GameObject)GameObject.Instantiate(obj,parent,false);
 #endif
             return g.GetComponent<T>();
         }
@@ -49,6 +50,14 @@ namespace nv
         public static bool FastApproximately( float a, float b, float threshold )
         {
             return ( ( a - b ) < 0 ? ( ( a - b ) * -1 ) : ( a - b ) ) <= threshold;
+        }
+
+        public static void GetOrAddComponent<T>( ref T result, GameObject source ) where T : UnityEngine.Component
+        {
+            result = source.GetComponent<T>();
+            if( result != null )
+                return;
+            result = source.AddComponent<T>();
         }
 
         public static void GetOrAddComponentIfNull<T>( ref T result, GameObject source ) where T : UnityEngine.Component
@@ -265,6 +274,31 @@ namespace nv
             pq = localSpace.localRotation * pq * Quaternion.Inverse( localSpace.localRotation );
             Vector3 vout = new Vector3(pq.x, pq.y, pq.z);
             return vout;
+        }
+
+        //Unity 5.2 and onward removed ToHexStringRGB in favor of the ColorUtility class methods
+        static string ColorToHex( Color color )
+        {
+#if UNITY_5_1
+        return color.ToHexStringRGB();
+#else
+            return ColorUtility.ToHtmlStringRGB( color );
+#endif
+        }
+
+        static string HexString( int val )
+        {
+            return val.ToString( "X" );
+        }
+
+        static string ColorStr( int r, int g, int b )
+        {
+            return Dev.HexString( r ) + Dev.HexString( g ) + Dev.HexString( b );
+        }
+
+        static string ColorStr( float r, float g, float b )
+        {
+            return Dev.HexString( (int)( 255.0f * Mathf.Clamp01( r ) ) ) + Dev.HexString( (int)( 255.0f * Mathf.Clamp01( g ) ) ) + Dev.HexString( (int)( 255.0f * Mathf.Clamp01( b ) ) );
         }
     }
 
