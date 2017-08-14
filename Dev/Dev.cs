@@ -52,12 +52,13 @@ namespace nv
             return ( ( a - b ) < 0 ? ( ( a - b ) * -1 ) : ( a - b ) ) <= threshold;
         }
 
-        public static void GetOrAddComponent<T>( ref T result, GameObject source ) where T : UnityEngine.Component
+        public static T GetOrAddComponent<T>( GameObject source ) where T : UnityEngine.Component
         {
-            result = source.GetComponent<T>();
+            T result = source.GetComponent<T>();
             if( result != null )
-                return;
+                return result;
             result = source.AddComponent<T>();
+            return result;
         }
 
         public static void GetOrAddComponentIfNull<T>( ref T result, GameObject source ) where T : UnityEngine.Component
@@ -277,7 +278,7 @@ namespace nv
         }
 
         //Unity 5.2 and onward removed ToHexStringRGB in favor of the ColorUtility class methods
-        static string ColorToHex( Color color )
+        public static string ColorToHex( Color color )
         {
 #if UNITY_5_1
         return color.ToHexStringRGB();
@@ -286,21 +287,52 @@ namespace nv
 #endif
         }
 
-        static string HexString( int val )
+        public static string HexString( int val )
         {
             return val.ToString( "X" );
         }
 
-        static string ColorStr( int r, int g, int b )
+        public static string ColorStr( int r, int g, int b )
         {
             return Dev.HexString( r ) + Dev.HexString( g ) + Dev.HexString( b );
         }
 
-        static string ColorStr( float r, float g, float b )
+        public static string ColorStr( float r, float g, float b )
         {
             return Dev.HexString( (int)( 255.0f * Mathf.Clamp01( r ) ) ) + Dev.HexString( (int)( 255.0f * Mathf.Clamp01( g ) ) ) + Dev.HexString( (int)( 255.0f * Mathf.Clamp01( b ) ) );
         }
+
+        public static Texture2D RectArrayToTexture<T>( T[,] data, System.Func<T,Color> toColor = null )
+        {
+            Texture2D tex = new Texture2D( (int)data.Length, (int)data.Rank, TextureFormat.ARGB32, false, false );
+            tex.filterMode = FilterMode.Point;
+            for( int j = 0; j < (int)data.Rank; ++j )
+            {
+                for( int i = 0; i < (int)data.Length; ++i )
+                {
+                    if( toColor == null )
+                    {
+                        if( data[ i, j ] != null )
+                        {
+                            tex.SetPixel( i, j, Color.red );
+                        }
+                        else
+                        {
+                            tex.SetPixel( i, j, Color.black );
+                        }
+                    }
+                    else
+                    {
+                        tex.SetPixel( i, j, toColor(data[ i, j ]) );
+                    }
+                }
+            }
+            tex.Apply();
+            return tex;
+        }
     }
+
+
 
 }
 

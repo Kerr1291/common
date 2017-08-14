@@ -11,6 +11,16 @@ namespace nv
 {
     public class DevLog : GameSingleton<DevLog>
     {
+        public static new DevLog Instance {
+            get {
+                DevLog log = GameSingleton<DevLog>.Instance;
+
+                if( log.logRoot == null )
+                    log.Setup();
+                return log;
+            }
+        }
+
         struct LogString
         {
             public string text;
@@ -71,6 +81,15 @@ namespace nv
             str.obj.GetComponent<Text>().text = s;
             content.Enqueue( str );
             UpdateLog();
+        }
+
+        void Setup()
+        {
+            logRoot = new GameObject();
+            Dev.GetOrAddComponent<Canvas>( logRoot );
+            Dev.GetOrAddComponent<RectTransform>( logRoot ).sizeDelta = new Vector2( 1024, 680 ); ;
+
+
         }
     }
 
