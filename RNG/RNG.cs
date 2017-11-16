@@ -5,6 +5,9 @@ using Meisui.Random;
 
 namespace nv
 {
+    /// <summary>
+    /// This class may be used to produce a sequence of pseudorandom numbers using the mersene twister algorithm
+    /// </summary>
     [Serializable]
     public class RNG
     {
@@ -213,6 +216,34 @@ namespace nv
         public bool CoinToss()
         {
             return Rand( 2 ) != 0;
+        }
+
+        //uses a given distribution and a range to weight the outcomes
+        //NOTE: Assumes the X range of the curve to be [0,1]
+        public int WeightedRand(AnimationCurve distribution, int min, int max)
+        {
+            float range = max - min;
+
+            //integrate the curve
+            float maxWeight = 0f;
+            for(int i = 0; i < range; ++i)
+            {
+                float t = i;
+                maxWeight += distribution.Evaluate(t / range);
+            }
+
+            float rngValue = Rand(maxWeight);
+
+            //find the outcome
+            float sum = 0f;
+            for(int i = 0; i < range; ++i)
+            {
+                float t = i;
+                sum += distribution.Evaluate(t / range);
+                if(sum > rngValue)
+                    return min + i;
+            }
+            return max;
         }
     }
 }

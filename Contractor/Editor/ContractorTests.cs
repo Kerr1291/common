@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace nv.EditorOnly
 {
     [TestFixture]
-    public class TestGameAction
+    public class TestContractor
     {
     }
 }

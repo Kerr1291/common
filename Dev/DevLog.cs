@@ -99,10 +99,7 @@ namespace nv
     /// </summary>
     public partial class Dev
     {
-        //Methods and members in this region should all be private
         #region Internal
-
-        public static int BaseFunctionHeader = 3;
 
         static string GetFunctionHeader( int frame = 0 )
         {
@@ -147,6 +144,8 @@ namespace nv
         #endregion
 
         #region Settings
+        
+        public static int BaseFunctionHeader = 3;
 
         static string _method_color = Dev.ColorToHex( Color.cyan );
         static string _log_color = Dev.ColorToHex( Color.white );
@@ -212,7 +211,7 @@ namespace nv
 #if UNITY_EDITOR
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) );
 #else
-            DevLog.Instance.Log( ( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) );
+            DevLog.Instance.Log( ( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) ) );
 #endif
         }
         public static void Log( string text, float r, float g, float b )
