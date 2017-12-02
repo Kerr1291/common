@@ -3,164 +3,181 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
 
-//using UnityEngine;
-
 namespace nv
 {
-    public interface INVMessageHandler
+    public class NVCallback : Attribute
     {
-        void HandleMessage(object msg);
     }
-
-    public class CommunicationHub
-    {
-        static CommunicationHub instance;
-
-        List<INVMessageHandler> nodes = new List<INVMessageHandler>();
-
-        public static void AddCommsNode(INVMessageHandler n)
-        {
-            if(instance.nodes.Contains(n))
-            {
-                instance.nodes.Add(n);
-            }
-        }
-
-        public static void RemoveCommsNode(INVMessageHandler n)
-        {
-            if(instance.nodes.Contains(n))
-            {
-                instance.nodes.Remove(n);
-            }
-        }
-
-        /// <summary>
-        /// Publish a message to all message handlers.
-        /// </summary>
-        /// <param name="msg">The <see cref="object"/> to publish.</param>
-        public static void BroadcastMessage(object msg)
-        {
-            if(instance == null)
-                instance = new CommunicationHub();
-
-            foreach(INVMessageHandler n in instance.nodes)
-            {
-                n.HandleMessage(msg);
-            }
-        }
-    }    
     
-
-    public class NVMessageHandler : Attribute
-    {
-    }
-
     [System.Serializable]
-    public class CommunicationNode<T> : INVMessageHandler, IDisposable
+    public class CommunicationNode
     {
-        private readonly Dictionary<Type, MethodInfo> enabledMessageCallbacks = new Dictionary<Type, MethodInfo>();
+        protected static CommunicationNode root;
+        protected CommunicationNode next;
+        protected CommunicationNode prev;
 
-        //[SerializeField]
-        //[HideInInspector]
-        public List<SerializableMethodInfo> enabledMethodInfos = new List<SerializableMethodInfo>();
+        protected static Action<object,object> invokeAction;
 
-        public CommunicationNode()
+        protected readonly Dictionary<Type, MethodInfo> enabledCallbacks = new Dictionary<Type, MethodInfo>();
+        protected List<SerializableMethodInfo> enabledMethodInfos = new List<SerializableMethodInfo>();
+
+        public virtual object Subject { get; private set; }
+
+        public static void Invoke( object data, object subject )
         {
-            CommunicationHub.AddCommsNode(this);
-            enabledMethodInfos.Clear();
-            enabledMessageCallbacks.Clear();
-            // get ALL public, protected, private, and internal methods defined on the node
-            var methodInfos = typeof(T).GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach(var methodInfo in methodInfos)
+            invokeAction.Invoke( data, subject );
+        }
+
+        public virtual void Invoke( object data )
+        {
+            Invoke( data, Subject );
+        }
+
+        public virtual void Register( object subject )
+        {
+            if( subject == null )
             {
-                bool isReceiverMethod = methodInfo.GetCustomAttributes(true).OfType<NVMessageHandler>().Any();
+                UnRegister();
+                return;
+            }
+
+            this.Subject = subject;
+
+            CommunicationNode.Add( this );
+            RefreshCallbackBindings();
+        }
+
+        public virtual void UnRegister()
+        {
+            if( Subject != null )
+            {
+                CommunicationNode.Remove( this );
+                Subject = null;
+            }
+        }
+
+        static CommunicationNode()
+        {
+            InvokeAction -= DefaultInvoke;
+            InvokeAction += DefaultInvoke;
+        }
+
+        protected static void Add( CommunicationNode node )
+        {
+            //if the node has non-null connections, clear them by removing it before we process the insertion
+            if( node.next != null || node.prev != null )
+            {
+                Remove( node );
+            }
+
+            if( root == null )
+            {
+                root = node;
+                root.next = root;
+                root.prev = root;
+            }
+
+            //add new nodes to the root
+            CommunicationNode prev = root;
+            CommunicationNode next = root.next;
+
+            node.next = next;
+            node.prev = prev;
+
+            next.prev = node;
+            prev.next = node;
+        }
+
+        protected static void Remove( CommunicationNode node )
+        {
+            if( node.next != null )
+                node.next.prev = node.prev;
+            if( node.prev != null )
+                node.prev.next = node.next;
+
+            node.next = null;
+            node.prev = null;
+
+            if( root != null && root.next == null && root.prev == null )
+                root = null;
+        }
+
+
+
+        protected virtual void InvokeThis( object data )
+        {
+            MethodInfo method;
+            if( enabledCallbacks.TryGetValue( data.GetType(), out method ) )
+            {
+                if( Subject != null )
+                    method.Invoke( Subject, new object[] { data } );
+            }
+        }
+
+        protected virtual void RefreshCallbackBindings()
+        {
+            enabledMethodInfos.Clear();
+            enabledCallbacks.Clear();
+            // get ALL public, protected, private, and internal methods defined on the node
+            var methodInfos = Subject.GetType().GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+            foreach( var methodInfo in methodInfos )
+            {
+                bool isReceiverMethod = methodInfo.GetCustomAttributes( true ).OfType<NVCallback>().Any();
                 ParameterInfo[] parameters = methodInfo.GetParameters();
-                if(isReceiverMethod)
+                if( isReceiverMethod )
                 {
-                    // the method has a [NVMessageHandler] attribute
-                    if(parameters.Length == 1)
+                    // the method has a [NVCallback] attribute
+                    if( parameters.Length == 1 )
                     {
                         // the method has a single parameter
-                        enabledMethodInfos.Add(new SerializableMethodInfo(methodInfo));
-                        enabledMessageCallbacks.Add(parameters[0].ParameterType, methodInfo);
+                        enabledMethodInfos.Add( new SerializableMethodInfo( methodInfo ) );
+                        enabledCallbacks.Add( parameters[ 0 ].ParameterType, methodInfo );
                     }
                     else
                     {
                         //Debug.LogErrorFormat("{0} is an invalid receiver method!  It must have exactly 1 parameter!", methodInfo.Name);
+                        Dev.Log( methodInfo.Name + "is an invalid receiver method!  It must have exactly 1 parameter!" );
                     }
                 }
             }
         }
 
-        public virtual void HandleMessage(object msg)
+        protected static void DefaultInvoke( object data, object subject )
         {
-            MethodInfo method;
-            if(enabledMessageCallbacks.TryGetValue(msg.GetType(), out method))
+            CommunicationNode current = root;
+
+            if( current != null )
             {
-                method.Invoke(this, new object[] { msg });
-            }
-        }
-
-        /// <summary>
-        /// Broadcasts a message to all receivers.
-        /// </summary>
-        /// <param name="msg">The <see cref="object"/> to broadcast.</param>
-        public void BroadcastMessage(object msg)
-        {
-            CommunicationHub.BroadcastMessage(msg);
-        }
-
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if(!disposedValue)
-            {
-                if(disposing)
+                do
                 {
-                    // TODO: dispose managed state (managed objects).
-                }
+                    //prevent sources from broadcasting to themselves
+                    if( current != subject && current.Subject != subject )
+                    {
+                        current.InvokeThis( data );
+                    }
 
-                //TODO: test me!
-                CommunicationHub.RemoveCommsNode(this);
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
+                    current = current.next;
 
-                disposedValue = true;
+                } while( current != root );
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-         ~CommunicationNode() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-           Dispose(false);
-         }
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
+        public static event Action<object, object> InvokeAction
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            GC.SuppressFinalize(this);
+            add
+            {
+                lock( invokeAction )
+                {
+                    invokeAction += value;
+                }
+            }
+            remove
+            {
+                lock( invokeAction )
+                {
+                    invokeAction -= value;
+                }
+            }
         }
-        #endregion
     }
-
-    //public class Foo
-    //{
-    //    CommunicationNode<Foo> comms = new CommunicationNode<Foo>();
-
-    //    void Bar()
-    //    {
-    //        comms.BroadcastMessage(5);
-    //    }
-
-    //    [NVMessageHandler]
-    //    void Baz(int m)
-    //    {
-
-    //    }
-    //}
 }
