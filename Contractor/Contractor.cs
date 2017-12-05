@@ -29,14 +29,14 @@ namespace nv
             contractors.Remove( contractor );
         }
 
-        public void Start( Contractor contractor )
+        public void BeginContract( Contractor contractor )
         {
             if( !contractors.ContainsKey( contractor ) )
                 return;
             StartCoroutine( contractors[ contractor ] );
         }
 
-        public void Stop( Contractor contractor )
+        public void EndContract( Contractor contractor )
         {
             if( !contractors.ContainsKey( contractor ) )
                 return;
@@ -93,7 +93,7 @@ namespace nv
 
         public virtual bool IsActive {
             get {
-                return ContractorManager.Instance.IsActive( this );
+                return ContractorManager.Instance != null && ContractorManager.Instance.IsActive( this );
             }
         }
 
@@ -133,9 +133,13 @@ namespace nv
         {
             if( IsActive || CurrentTime > 0f )
                 return;
+
+            if( ContractorManager.Instance == null )
+                return;
+
             ContractorManager.Instance.Add( this, Main() );
             InvokeAction( OnStart );
-            ContractorManager.Instance.Start( this );
+            ContractorManager.Instance.BeginContract( this );
         }
 
         public void Complete()
@@ -147,7 +151,10 @@ namespace nv
 
         public void Reset()
         {
-            ContractorManager.Instance.Stop( this );
+            if( ContractorManager.Instance == null )
+                return;
+
+            ContractorManager.Instance.EndContract( this );
             ContractorManager.Instance.Remove( this );
             CurrentTime = 0f;
         }
@@ -162,7 +169,7 @@ namespace nv
                 {
                     InvokeAction( OnUpdate );
                     InvokeAction( OnLerp, NormalizedCurrentTime );
-                    CurrentTime = updateRate;
+                    CurrentTime += updateRate;
                     yield return updateYieldType;
                 }
 

@@ -166,14 +166,14 @@ namespace nv
         {
             add
             {
-                lock( invokeAction )
+                //lock( invokeAction )
                 {
                     invokeAction += value;
                 }
             }
             remove
             {
-                lock( invokeAction )
+                //lock( invokeAction )
                 {
                     invokeAction -= value;
                 }
