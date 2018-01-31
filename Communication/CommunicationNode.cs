@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace nv
 {
-    public class NVCallback : Attribute
+    public class CommunicationCallback : Attribute
     {
     }
     
@@ -16,58 +16,69 @@ namespace nv
         protected CommunicationNode next;
         protected CommunicationNode prev;
 
-        protected static Action<object,object> invokeAction;
+        protected static Action<object,object> publishAction;
 
         protected readonly Dictionary<Type, MethodInfo> enabledCallbacks = new Dictionary<Type, MethodInfo>();
         protected List<SerializableMethodInfo> enabledMethodInfos = new List<SerializableMethodInfo>();
 
-        public virtual object Subject { get; private set; }
+        public virtual object NodeOwner { get; private set; }
 
-        public static void Invoke( object data, object subject )
+        public static void Publish( object data, object publisher )
         {
-            invokeAction.Invoke( data, subject );
+            publishAction.Invoke( data, publisher );
         }
 
-        public virtual void Invoke( object data )
+        public virtual void Publish( object data )
         {
-            Invoke( data, Subject );
+            Publish( data, NodeOwner );
         }
 
-        public virtual void Register( object subject )
+        public virtual void EnableNode( object nodeOwner )
         {
-            if( subject == null )
+            if(nodeOwner.GetType() == this.GetType())
             {
-                UnRegister();
+                //error: nodes themselves cannot be owners
+                //TODO: throw assert
+                DisableNode();
                 return;
             }
 
-            this.Subject = subject;
+            if( nodeOwner == null )
+            {
+                DisableNode();
+                return;
+            }
 
-            CommunicationNode.Add( this );
+            this.NodeOwner = nodeOwner;
+
+            CommunicationNode.AddNode( this );
             RefreshCallbackBindings();
         }
 
-        public virtual void UnRegister()
+        public virtual void DisableNode()
         {
-            if( Subject != null )
-            {
-                CommunicationNode.Remove( this );
-                Subject = null;
-            }
+            CommunicationNode.RemoveNode( this );
+            NodeOwner = null;
         }
 
         static CommunicationNode()
         {
-            InvokeAction -= DefaultInvoke;
-            InvokeAction += DefaultInvoke;
+            //prevent publishAction from ever being null 
+            publishAction -= EmptyAction;
+            publishAction += EmptyAction;
+
+            PublishAction -= DefaultPublish;
+            PublishAction += DefaultPublish;
         }
 
-        protected static void Add( CommunicationNode node )
+        static void EmptyAction(object data, object publisher) { }
+        
+        protected static void AddNode( CommunicationNode node )
         {
             //if the node has non-null connections, clear them by removing it before we process the insertion
             if( node.next != null || node.prev != null )
             {
-                Remove( node );
+                RemoveNode( node );
             }
 
             if( root == null )
@@ -88,7 +99,7 @@ namespace nv
             prev.next = node;
         }
 
-        protected static void Remove( CommunicationNode node )
+        protected static void RemoveNode( CommunicationNode node )
         {
             if( node.next != null )
                 node.next.prev = node.prev;
@@ -102,80 +113,123 @@ namespace nv
                 root = null;
         }
 
-
-
-        protected virtual void InvokeThis( object data )
+        protected virtual void InvokeMatchingCallback( object data, object publisher )
         {
             MethodInfo method;
             if( enabledCallbacks.TryGetValue( data.GetType(), out method ) )
             {
-                if( Subject != null )
-                    method.Invoke( Subject, new object[] { data } );
+                if(NodeOwner != null)
+                {
+                    //also broadcast the publisher
+                    if(method.GetParameters().Length == 2)
+                    {
+                        method.Invoke(NodeOwner, new object[] { data, publisher });
+                    }
+                    else
+                    {
+                        //standard way, don't send the owner
+                        method.Invoke(NodeOwner, new object[] { data });
+                    }
+                }
             }
         }
-
+        
         protected virtual void RefreshCallbackBindings()
         {
             enabledMethodInfos.Clear();
             enabledCallbacks.Clear();
+
             // get ALL public, protected, private, and internal methods defined on the node
-            var methodInfos = Subject.GetType().GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+            var methodInfos = NodeOwner.GetType().GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
             foreach( var methodInfo in methodInfos )
             {
-                bool isReceiverMethod = methodInfo.GetCustomAttributes( true ).OfType<NVCallback>().Any();
+                bool isReceiverMethod = methodInfo.GetCustomAttributes( true ).OfType<CommunicationCallback>().Any();
                 ParameterInfo[] parameters = methodInfo.GetParameters();
+
+                // the method has a [CommunicationCallback] attribute
                 if( isReceiverMethod )
                 {
-                    // the method has a [NVCallback] attribute
                     if( parameters.Length == 1 )
                     {
-                        // the method has a single parameter
+                        Dev.Log("adding single parameter callback");
+                        // the method has a single parameter, the callback binder doesn't expect 
                         enabledMethodInfos.Add( new SerializableMethodInfo( methodInfo ) );
                         enabledCallbacks.Add( parameters[ 0 ].ParameterType, methodInfo );
                     }
+                    //this method takes two parameters, the 2nd of which is the sending object
+                    else if(parameters.Length == 2)
+                    {
+                        Dev.Log("adding double parameter callback");
+                        // the method has a two parameters, the 2nd is the sending object
+                        enabledMethodInfos.Add(new SerializableMethodInfo(methodInfo));
+                        enabledCallbacks.Add(parameters[0].ParameterType, methodInfo);
+                    }
                     else
                     {
+                        Dev.Log("method did not match any callback configuration");
+                        //TODO: change to using standard exceptions so we don't have a dependency on debug logging
                         //Debug.LogErrorFormat("{0} is an invalid receiver method!  It must have exactly 1 parameter!", methodInfo.Name);
-                        Dev.Log( methodInfo.Name + "is an invalid receiver method!  It must have exactly 1 parameter!" );
+                        //Dev.Log( methodInfo.Name + "is an invalid receiver method!  It must have exactly 1 parameter!" );
                     }
                 }
             }
         }
 
-        protected static void DefaultInvoke( object data, object subject )
+        protected static void DefaultPublish( object data, object publisher )
         {
             CommunicationNode current = root;
+
+            List<CommunicationNode> orphanList = null;
 
             if( current != null )
             {
                 do
                 {
-                    //prevent sources from broadcasting to themselves
-                    if( current != subject && current.Subject != subject )
+                    //keep track of orphaned nodes
+                    if(current.NodeOwner == null)
                     {
-                        current.InvokeThis( data );
+                        if(orphanList == null)
+                            orphanList = new List<CommunicationNode>();
+
+                        orphanList.Add(current);
+                        continue;
+                    }
+
+                    //prevent sources from publishing to themselves
+                    if( current.NodeOwner != publisher )
+                    {
+                        current.InvokeMatchingCallback( data, publisher );
                     }
 
                     current = current.next;
 
                 } while( current != root );
             }
+
+            if(orphanList != null)
+            {
+                //remove/clean up orphaned nodes
+                for(int i = 0; i < orphanList.Count; ++i)
+                {
+                    RemoveNode(orphanList[i]);
+                }
+            }
         }
 
-        public static event Action<object, object> InvokeAction
+        public static event Action<object, object> PublishAction
         {
             add
             {
-                //lock( invokeAction )
+                lock( publishAction )
                 {
-                    invokeAction += value;
+                    publishAction += value;
                 }
             }
             remove
             {
-                //lock( invokeAction )
+                lock( publishAction )
                 {
-                    invokeAction -= value;
+                    publishAction -= value;
                 }
             }
         }
