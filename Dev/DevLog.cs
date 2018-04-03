@@ -1,8 +1,14 @@
-﻿using UnityEngine;
+﻿//TODO: move define into precompiler option
+#define ENABLE_COLOR //<-uncomment to enable color hex codes on output in the debug logs
+#define DISABLE_EDITOR_DEBUG //<-uncomment to test non-editor debugging in the editor
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System;
+
+//change to anything with an Instance.Log function
+using DevLog = nv.DevLog;
 
 //disable the unreachable code detected warning for this file
 #pragma warning disable 0162
@@ -14,8 +20,7 @@ namespace nv
         public static new DevLog Instance {
             get {
                 DevLog log = GameSingleton<DevLog>.Instance;
-
-                if( log.logRoot == null )
+                if( log.logRoot == null)
                     log.Setup();
                 return log;
             }
@@ -37,6 +42,81 @@ namespace nv
 
         [SerializeField]
         GameObject logTextPrefab = null;
+        
+        Vector2 logWindowSize
+        {
+            get
+            {
+                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
+                return canvas.gameObject.GetOrAddComponent<RectTransform>().rect.size;
+            }
+            set
+            {
+                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
+                Rect currentRect = canvas.gameObject.GetOrAddComponent<RectTransform>().rect;
+                canvas.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = value;
+            }
+        }
+
+        public int maxLines = 10;
+
+        public void SetupPrefabs()
+        {
+            if( logRoot == null )
+            {
+                logRoot = gameObject;
+                //logRoot = new GameObject("DebugLogRoot");
+                Canvas canvas = logRoot.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = new Vector2( 1920f * .5f, 1080f * 20f );
+                CanvasScaler canvasScaler = logRoot.AddComponent<CanvasScaler>();
+                canvasScaler.referenceResolution = new Vector2( 1920f, 1080f );
+            }
+            if(logTextPrefab == null)
+            {
+                logTextPrefab = new GameObject("DebugLogTextElement");
+                logTextPrefab.transform.SetParent(logRoot.transform);
+                Text text = logTextPrefab.AddComponent<Text>();
+                text.color = Color.red;
+                text.font = Font.CreateDynamicFontFromOSFont("Arial", 14);
+                text.fontSize = 12;
+                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                text.verticalOverflow = VerticalWrapMode.Overflow;
+                text.alignment = TextAnchor.MiddleLeft;
+                ContentSizeFitter csf = logTextPrefab.AddComponent<ContentSizeFitter>();
+                csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
+                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().anchorMin = new Vector2(0f, 1f);
+                //logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = Vector2.zero;
+                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().anchoredPosition = new Vector2(0f,0f);
+                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+
+                logTextPrefab.SetActive(false);
+            }
+            if( logWindow == null )
+            {
+                logWindow = new GameObject( "DebugLogWindow" );
+                logWindow.transform.SetParent( logRoot.transform );
+                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
+
+                //create a window that fills its parent
+                canvas.gameObject.GetOrAddComponent<RectTransform>().anchorMax = Vector2.one;
+                canvas.gameObject.GetOrAddComponent<RectTransform>().anchorMin = Vector2.zero;
+                canvas.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = Vector2.zero;
+                canvas.gameObject.GetOrAddComponent<RectTransform>().anchoredPosition = Vector2.zero;
+
+                //add background image
+                Image bg = logWindow.AddComponent<Image>();
+
+                //mostly black/dark grey transparent background
+                bg.color = new Color( .1f, .1f, .1f, .4f );
+            }
+            GameObject.DontDestroyOnLoad( logTextPrefab );
+            GameObject.DontDestroyOnLoad( logRoot );
+            GameObject.DontDestroyOnLoad( logWindow );
+        }
 
         public void Hide()
         {
@@ -55,6 +135,7 @@ namespace nv
 
         void UpdateLog()
         {
+            int i = 0;
             float line_size = LineSize();
             float total_size = content.Count * line_size;
             float max_size = logWindow.GetComponent<RectTransform>().rect.height;
@@ -63,6 +144,24 @@ namespace nv
                 LogString lString = content.Dequeue();
                 Destroy( lString.obj.gameObject );
                 total_size -= line_size;
+            }
+            while(content.Count > maxLines)
+            {
+                LogString lString = content.Dequeue();
+                Destroy(lString.obj.gameObject);
+            }
+
+            UpdatePositions();
+        }
+
+        void UpdatePositions()
+        {
+            float size = LineSize();
+            int index = 0;
+            foreach(LogString lstring in content)
+            {
+                lstring.obj.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -size * index);
+                ++index;
             }
         }
 
@@ -75,7 +174,7 @@ namespace nv
             if( logRoot == null )
                 return;
 
-            LogString str = new LogString() { text = s, obj = GameObject.Instantiate( logTextPrefab, logWindow.transform ) };
+            LogString str = new LogString() { text = s, obj = GameObject.Instantiate( logTextPrefab, logWindow.transform ) as GameObject };
             str.obj.SetActive( true );
             str.obj.transform.localScale = Vector3.one;
             str.obj.GetComponent<Text>().text = s;
@@ -85,11 +184,11 @@ namespace nv
 
         void Setup()
         {
-            logRoot = new GameObject();
-            Dev.GetOrAddComponent<Canvas>( logRoot );
-            Dev.GetOrAddComponent<RectTransform>( logRoot ).sizeDelta = new Vector2( 1024, 680 ); ;
+            //logRoot = new GameObject();
+            //Dev.GetOrAddComponent<Canvas>( logRoot );
+            //Dev.GetOrAddComponent<RectTransform>( logRoot ).sizeDelta = new Vector2( 1024, 680 ); ;
 
-
+            SetupPrefabs();
         }
     }
 
@@ -132,7 +231,11 @@ namespace nv
 
         static string Colorize( string text, string colorhex )
         {
+#if ENABLE_COLOR
             string str = "<color=#" + colorhex + ">" + "<b>" + text + "</b>" + "</color>";
+#else
+            string str = text;
+#endif
             return str;
         }
 
@@ -141,9 +244,9 @@ namespace nv
             return Dev.Colorize( Dev.GetFunctionHeader( frame ), Dev._method_color ) + " :::: ";
         }
 
-        #endregion
+#endregion
 
-        #region Settings
+#region Settings
         
         public static int BaseFunctionHeader = 3;
 
@@ -167,21 +270,23 @@ namespace nv
             public static void SetParamColor( Color c ) { Dev._param_color = Dev.ColorToHex( c ); }
 
         }
-        #endregion
+#endregion
 
-        #region Logging
+#region Logging
 
 
         public static void Where()
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.Log( " :::: " + Dev.FunctionHeader() );
+#else
+            DevLog.Instance.Log( " :::: " + Dev.FunctionHeader() );
 #endif
         }
 
         public static void LogError( string text )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.LogError( Dev.FunctionHeader() + Dev.Colorize( text, ColorToHex( Color.red ) ) );
 #else
             DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( text, ColorToHex(Color.red) ) );
@@ -190,7 +295,7 @@ namespace nv
 
         public static void LogWarning( string text )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.LogWarning( Dev.FunctionHeader() + Dev.Colorize( text, ColorToHex(Color.yellow) ) );
 #else
             DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( text, ColorToHex(Color.yellow) ) );
@@ -199,7 +304,7 @@ namespace nv
 
         public static void Log( string text )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( text, _log_color ) );
 #else
             DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( text, _log_color ) );
@@ -208,7 +313,7 @@ namespace nv
 
         public static void Log( string text, int r, int g, int b )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) );
 #else
             DevLog.Instance.Log( ( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) ) );
@@ -216,7 +321,7 @@ namespace nv
         }
         public static void Log( string text, float r, float g, float b )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) );
 #else
             DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorStr( r, g, b ) ) );
@@ -225,7 +330,7 @@ namespace nv
 
         public static void Log( string text, Color color )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorToHex( color ) ) );
 #else
             DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( text, Dev.ColorToHex( color ) ) );
@@ -240,13 +345,14 @@ namespace nv
         /// <param name="var"></param>
         public static void LogVar<T>( T var )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             string var_name = GetVarName(var);// var.GetType().
             string var_value = Convert.ToString( var );
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( var_name, _param_color ) + " = " + Dev.Colorize( var_value, _log_color ) );
 #else
-        //in the case of a release build, this will be called instead
-        LogVar( "--DEBUG VAR (Change this call to see a meaningful label)--", var );
+            string var_name = var == null ? "Null" : var.GetType().Name;
+            string var_value = Convert.ToString( var );
+            DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( var_name, _param_color ) + " = " + Dev.Colorize( var_value, _log_color ) );
 #endif
         }
 
@@ -259,7 +365,7 @@ namespace nv
         {
             string var_name = label;
             string var_value = Convert.ToString( var );
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( var_name, _param_color ) + " = " + Dev.Colorize( var_value, _log_color ) );
 #else
             DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( var_name, _param_color ) + " = " + Dev.Colorize( var_value, _log_color ) );
@@ -273,28 +379,44 @@ namespace nv
         /// <param name="array"></param>
         public static void LogVarArray<T>( string label, IList<T> array )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             int size = array.Count;
             for( int i = 0; i < size; ++i )
             {
                 string vname = label + "[" + Dev.Colorize( Convert.ToString( i ), _log_color ) +"]";
                 UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( vname, _param_color ) + " = " + Dev.Colorize( Convert.ToString( array[ i ] ), _log_color ) );
             }
+#else
+            int size = array.Count;
+            for( int i = 0; i < size; ++i )
+            {
+                string vname = label + "[" + Dev.Colorize( Convert.ToString( i ), _log_color ) +"]";
+                DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( vname, _param_color ) + " = " + Dev.Colorize( Convert.ToString( array[ i ] ), _log_color ) );
+            }
 #endif
         }
 
         public static void LogVarOnlyThis<T>( string label, T var, string input_name, string this_name )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             if( this_name != input_name )
                 return;
 
             string var_name = label;
             string var_value = Convert.ToString( var );
             UnityEngine.Debug.Log( Dev.FunctionHeader() + Dev.Colorize( var_name, _param_color ) + " = " + Dev.Colorize( var_value, _log_color ) );
+
+#else
+
+            if( this_name != input_name )
+                return;
+
+            string var_name = label;
+            string var_value = Convert.ToString( var );
+            DevLog.Instance.Log( Dev.FunctionHeader() + Dev.Colorize( var_name, _param_color ) + " = " + Dev.Colorize( var_value, _log_color ) );            
 #endif
         }
-        #endregion
+#endregion
 
         #region Helpers
 
@@ -305,7 +427,7 @@ namespace nv
 
         public static void PrintHideFlagsInChildren( GameObject parent, bool print_nones = false )
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
             bool showed_where = false;
 
             if( print_nones )
@@ -328,6 +450,29 @@ namespace nv
                     UnityEngine.Debug.Log( Dev.Colorize( child.gameObject.name, Dev.ColorToHex( Color.white ) ) + ".hideflags = " + Dev.Colorize( Convert.ToString( child.gameObject.hideFlags ), _param_color ) );
                 }
             }
+#else
+            bool showed_where = false;
+
+            if( print_nones )
+            {
+                Dev.Where();
+                showed_where = true;
+            }
+
+            foreach( Transform child in parent.GetComponentsInChildren<Transform>() )
+            {
+                if( print_nones && child.gameObject.hideFlags == HideFlags.None )
+                    DevLog.Instance.Log( Dev.Colorize( child.gameObject.name, Dev.ColorToHex( Color.white ) ) + ".hideflags = " + Dev.Colorize( Convert.ToString( child.gameObject.hideFlags ), _param_color ) );
+                else if( child.gameObject.hideFlags != HideFlags.None )
+                {
+                    if( !showed_where )
+                    {
+                        Dev.Where();
+                        showed_where = true;
+                    }
+                    DevLog.Instance.Log( Dev.Colorize( child.gameObject.name, Dev.ColorToHex( Color.white ) ) + ".hideflags = " + Dev.Colorize( Convert.ToString( child.gameObject.hideFlags ), _param_color ) );
+                }
+            }
 #endif
         }
 
@@ -339,7 +484,7 @@ namespace nv
             }
         }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_EDITOR_DEBUG
         class GetVarNameHelper
         {
             public static Dictionary<string, string> _cached_name = new Dictionary<string, string>();
@@ -362,6 +507,16 @@ namespace nv
                 GetVarNameHelper._cached_name.Add( uniqueId, varName );
                 return varName;
             }
+        }
+#else
+        class GetVarNameHelper
+        {
+            public static Dictionary<string, string> _cached_name = new Dictionary<string, string>();
+        }
+
+        static string GetVarName( object obj )
+        {
+            return obj == null ? "Null" : obj.GetType().Name;
         }
 #endif
         #endregion
