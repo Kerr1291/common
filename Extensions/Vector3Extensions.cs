@@ -5,8 +5,27 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using NUnit.Framework;
+using UnityEngine.TestTools;
+#endif
+
 namespace nv
 {
+
+#if UNITY_EDITOR
+    public class Vector3ExtensionsTests
+    {
+        [Test]
+        public void TestSetX()
+        {
+            Vector3 v = Vector3.zero;
+            v = v.SetX(1f);
+            Assert.That(Mathnv.FastApproximately(v.x,1f,Mathf.Epsilon), Is.True, "The test vector is "+v);
+        }
+    }
+#endif
+
     public static class Vector3Extensions
     {
         public static void Clamp( this Vector3 value, Vector3 min, Vector3 max )
@@ -31,24 +50,28 @@ namespace nv
             input = new Vector3(pq.x, pq.y, pq.z);
         }        
 
-        public static void Set( this Vector3 v, int componentIndex, float value )
+        public static Vector3 Set( this Vector3 v, int componentIndex, float value )
         {
             v[ componentIndex ] = value;
+            return v;
         }
 
-        public static void SetX( this Vector3 v, float value )
+        public static Vector3 SetX( this Vector3 v, float value )
         {
-            v[ 0 ] = value;
+            v[0] = value;
+            return v;
         }
 
-        public static void SetY( this Vector3 v, float value )
+        public static Vector3 SetY( this Vector3 v, float value )
         {
             v[ 1 ] = value;
+            return v;
         }
 
-        public static void SetZ( this Vector3 v, float value )
+        public static Vector3 SetZ( this Vector3 v, float value )
         {
             v[ 2 ] = value;
+            return v;
         }
 
         public static Vector3 Sign( this Vector3 v )
