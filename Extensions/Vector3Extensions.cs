@@ -28,27 +28,31 @@ namespace nv
 
     public static class Vector3Extensions
     {
-        public static void Clamp( this Vector3 value, Vector3 min, Vector3 max )
+        public static Vector3 Clamp( this Vector3 value, Vector3 min, Vector3 max )
         {
             value.x = Mathf.Clamp( value.x, min.x, max.x );
             value.y = Mathf.Clamp( value.y, min.y, max.y );
             value.z = Mathf.Clamp( value.z, min.z, max.z );
+            return value;
         }
 
-        public static void Clamp01( this Vector3 value )
+        public static Vector3 Clamp01( this Vector3 value )
         {
             value.x = Mathf.Clamp( value.x, Vector3.zero.x, Vector3.one.x );
             value.y = Mathf.Clamp( value.y, Vector3.zero.y, Vector3.one.y );
             value.z = Mathf.Clamp( value.z, Vector3.zero.z, Vector3.one.z );
+            return value;
         }
 
-        public static void RotateToLocalSpace( this Vector3 input, Transform localSpace )
+        public static Vector3 RotateToLocalSpace( this Vector3 input, Transform localSpace )
         {
             Vector4 p = input;
             Quaternion pq = new Quaternion(p.x, p.y, p.z, 0);
             pq = localSpace.localRotation * pq * Quaternion.Inverse( localSpace.localRotation );
             input = new Vector3(pq.x, pq.y, pq.z);
-        }        
+            return input;
+        }
+
 
         public static Vector3 Set( this Vector3 v, int componentIndex, float value )
         {
@@ -58,7 +62,7 @@ namespace nv
 
         public static Vector3 SetX( this Vector3 v, float value )
         {
-            v[0] = value;
+            v[ 0 ] = value;
             return v;
         }
 
@@ -83,11 +87,12 @@ namespace nv
             return t;
         }
 
-        public static void ToInt( this Vector3 v )
+        public static Vector3 ToInt( this Vector3 v )
         {
             v.x = (int)( v.x );
             v.y = (int)( v.y );
             v.z = (int)( v.z );
+            return v;
         }
     }
 }
