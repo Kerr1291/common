@@ -262,8 +262,8 @@ namespace nv
     public class Dev
     {
 #if UNITY_EDITOR
-        const string MENU_ROOT = "NV";
-        const string MENU_DEBUG_FOLDER = "Debug";
+        public const string MENU_ROOT = "NV";
+        public const string MENU_DEBUG_FOLDER = "Debug";
         [MenuItem(MENU_ROOT +"/"+ MENU_DEBUG_FOLDER + "/Print Hideflags In Selected (And Children)")]
         static void Menu_PrintHideFlags()
         {
