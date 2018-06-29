@@ -10,6 +10,6 @@ public class HierarchyHighlighterComponent : MonoBehaviour
     public Color color = Color.black;
 
     [TextArea( 4, 20 )]
-    [Tooltip( "Dev comments :)" )]
+    [Tooltip( "Space for comments" )]
     public string comment;
 }

@@ -11,7 +11,6 @@ public class ScriptableValue<T> : ScriptableObject
     public T Value;
 }
 
-
 //[CreateAssetMenu]
 //public class BoolValue : ScriptableValue<bool> { }
 

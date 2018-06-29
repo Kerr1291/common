@@ -45,14 +45,12 @@ namespace nv
 
         public static T GetRandomElementFromList<T>( this List<T> list )
         {
-            int index = GameRNG.Rand(0, list.Count);
-            return list[ index ];
+            return GameRNG.RandomElement(list);
         }
 
         public static T GetRandomElementFromList<T>( this List<T> list, RNG rng )
         {
-            int index = rng.Rand(0, list.Count);
-            return list[ index ];
+            return rng.RandomElement<T>(list);
         }
 
         public static GameObject CreateLineRenderer( this List<Vector2> points, Color c, float z = 0f, float width = .5f )

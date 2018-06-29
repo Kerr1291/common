@@ -15,7 +15,7 @@ namespace nv
         public class StopShakeMessage { }
 
         [SerializeField]
-        nv.CommunicationNode node = new nv.CommunicationNode();
+        CommunicationNode node = new CommunicationNode();
 
         [Header("Shake extents")]
         public Vector3 axisShakeMin;

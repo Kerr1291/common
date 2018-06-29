@@ -36,8 +36,8 @@ namespace nv
         public static Vector2 Sign( this Vector2 v )
         {
             Vector3 t = Vector3.zero;
-            t.x = Mathnv.Sign( v.x );
-            t.y = Mathnv.Sign( v.y );
+            t.x = Mathf.Sign( v.x );
+            t.y = Mathf.Sign( v.y );
             return t;
         }
 

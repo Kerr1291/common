@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using nv;
 
 namespace nv
 {
@@ -78,28 +77,6 @@ namespace nv
             pq = localSpace.localRotation * pq * Quaternion.Inverse( localSpace.localRotation );
             Vector3 vout = new Vector3(pq.x, pq.y, pq.z);
             return vout;
-        }
-
-        public static int Sign( int v )
-        {
-            if( v < 0 )
-                v = -1;
-            else if( v > 0 )
-                v = 1;
-            else
-                v = 0;
-            return v;
-        }
-
-        public static float Sign( float v )
-        {
-            if( v < 0.0f )
-                v = -1.0f;
-            else if( v > 0.0f )
-                v = 1.0f;
-            else
-                v = 0.0f;
-            return v;
         }
 
         public static bool Contains( Vector2 pos, Vector2 min, Vector2 max )

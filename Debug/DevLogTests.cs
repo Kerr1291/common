@@ -34,7 +34,7 @@ namespace nv.Tests
     public class DevLogTests
     {
         [UnityTest]
-        public IEnumerator StartGameTransition()
+        public IEnumerator CreateDevLogAndPostSomeData()
         {
             if(GameObject.FindObjectOfType<Camera>() == null)
             {
@@ -46,7 +46,7 @@ namespace nv.Tests
                 nv.Dev.Log("Test: "+i);
             nv.Dev.LogVar(test);
             //new MonoBehaviourTest<TestGameTransition>();
-            DevLog behaviorTest = Object.FindObjectOfType<DevLog>();
+            var behaviorTest = Object.FindObjectOfType<DevLog.DevLogObject>();
             yield return null;
             Assert.That(behaviorTest != null, Is.True, "DevLog was created.");
             yield break;

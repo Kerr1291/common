@@ -22,7 +22,7 @@ namespace nv
         }
         */
 
-        public static bool WriteDataToFile<T>(string path, T settings) where T : class
+        public static bool WriteDataToFile<T>(string path, T data) where T : class
         {
             bool result = false;
             XmlSerializer serializer = new XmlSerializer(typeof(T));
@@ -30,7 +30,7 @@ namespace nv
             try
             {
                 fstream = new FileStream(path, FileMode.Create);
-                serializer.Serialize(fstream, settings);
+                serializer.Serialize(fstream, data);
                 result = true;
             }
             catch(System.Exception e)
@@ -44,9 +44,9 @@ namespace nv
             return result;
         }
 
-        public static bool ReadDataFromFile<T>(string path, out T settings) where T : class
+        public static bool ReadDataFromFile<T>(string path, out T data) where T : class
         {
-            settings = null;
+            data = null;
 
             if(!File.Exists(path))
             {
@@ -61,7 +61,7 @@ namespace nv
             try
             {
                 fstream = new FileStream(path, FileMode.Open);
-                settings = serializer.Deserialize(fstream) as T;
+                data = serializer.Deserialize(fstream) as T;
             }
             catch(System.Exception e)
             {

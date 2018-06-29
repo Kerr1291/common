@@ -13,18 +13,18 @@ using UnityEngine.TestTools;
 namespace nv
 {
 
-#if UNITY_EDITOR
-    public class Vector3ExtensionsTests
-    {
-        [Test]
-        public void TestSetX()
-        {
-            Vector3 v = Vector3.zero;
-            v = v.SetX(1f);
-            Assert.That(Mathnv.FastApproximately(v.x,1f,Mathf.Epsilon), Is.True, "The test vector is "+v);
-        }
-    }
-#endif
+//#if UNITY_EDITOR
+//    public class Vector3ExtensionsTests
+//    {
+//        [Test]
+//        public void TestSetX()
+//        {
+//            Vector3 v = Vector3.zero;
+//            v = v.SetX(1f);
+//            Assert.That(Mathnv.FastApproximately(v.x,1f,Mathf.Epsilon), Is.True, "The test vector is "+v);
+//        }
+//    }
+//#endif
 
     public static class Vector3Extensions
     {
@@ -81,9 +81,9 @@ namespace nv
         public static Vector3 Sign( this Vector3 v )
         {
             Vector3 t = Vector3.zero;
-            t.x = Mathnv.Sign( v.x );
-            t.y = Mathnv.Sign( v.y );
-            t.z = Mathnv.Sign( v.z );
+            t.x = Mathf.Sign( v.x );
+            t.y = Mathf.Sign( v.y );
+            t.z = Mathf.Sign( v.z );
             return t;
         }
 
