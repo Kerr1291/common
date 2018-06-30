@@ -43,9 +43,6 @@ namespace nv
         [Range(0.0f, 1.0f)]
         float defaultVolume = 0.5f;
 
-        [SerializeField]
-        List<string> commNetworks;
-
         public UnityEngine.UI.Slider uiController;
 
         [SerializeField]
@@ -109,7 +106,7 @@ namespace nv
 
         void OnEnable()
         {
-            comms.EnableNode(this, commNetworks);
+            comms.EnableNode(this);
 
             if(!GameObject.FindObjectsOfType<AudioListener>().Any())
                 gameObject.AddComponent<AudioListener>();

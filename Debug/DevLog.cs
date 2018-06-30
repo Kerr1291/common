@@ -70,6 +70,10 @@ namespace nv
             get
             {
 #if UNITY_EDITOR
+                if(!System.IO.Directory.Exists("Assets/Resources"))
+                {
+                    System.IO.Directory.CreateDirectory("Assets/Resources");
+                }
                 settings = (DevLogSettings)AssetDatabase.LoadAssetAtPath("Assets/Resources/DevLogSettings.asset", typeof(DevLogSettings));
                 //asset doesn't exist, create it
                 if(settings == null)

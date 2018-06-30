@@ -7,12 +7,12 @@ namespace nv
 {
     public class CameraShake : MonoBehaviour
     {
-        public class StartShakeMessage
+        public class StartShake
         {
             public float shakeTime;
         }
 
-        public class StopShakeMessage { }
+        public class StopShake { }
 
         [SerializeField]
         CommunicationNode node = new CommunicationNode();
@@ -37,7 +37,7 @@ namespace nv
             node.DisableNode();
         }
 
-        public void StartShake(float shakeTime = 0f)
+        public void Play(float shakeTime = 0f)
         {
             if(shakeTime <= 0f)
                 return;
@@ -55,7 +55,7 @@ namespace nv
             StartCoroutine(ShakeCamera(shakeTime));
         }
 
-        public void StopShake()
+        public void Stop()
         {
             shakeCamera = null;
             transform.position = startPos;
@@ -87,26 +87,26 @@ namespace nv
         [ContextMenu("Start Demo Shake")]
         void DemoStartShake()
         {
-            StartShake(4f);
+            Play(4f);
         }
 
         [ContextMenu("Stop Demo Shake")]
         void DemoStopShake()
         {
-            StopShake();
+            Stop();
         }
 #endif
 
         [CommunicationCallback]
-        void HandleStartCameraShake(StartShakeMessage msg)
+        void HandleStartCameraShake(StartShake msg)
         {
-            StartShake(msg.shakeTime);
+            Play(msg.shakeTime);
         }
 
         [CommunicationCallback]
-        void HandleStopCameraShake(StopShakeMessage msg)
+        void HandleStopCameraShake(StopShake msg)
         {
-            StopShake();
+            Stop();
         }
     }
 }

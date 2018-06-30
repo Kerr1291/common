@@ -82,7 +82,10 @@ namespace nv
             onSceneLoadedQueue.Clear();
         }
 #endif
-
+        /// <summary>
+        /// Optional list of networks to join when this node is enabled.
+        /// </summary>
+        public List<string> networksToJoinOnEnable;
 
         /// <summary>
         /// Enable this to allow an object to publish events to itself.
@@ -332,6 +335,8 @@ namespace nv
 #endif
                 }
             }
+
+            totalNetworks.AddRange(networksToJoinOnEnable);
 
             //By default, use the type name to add the object to its own network
             if(totalNetworks.Count <= 0)

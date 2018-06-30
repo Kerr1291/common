@@ -14,7 +14,7 @@ namespace nv
         public List<Vector2> result;
         public List<Vector2> debugPath;
 
-        public int throttle = 100;
+        public int throttle = 10000;
 
         public IEnumerator FindPath<T>(ArrayGrid<T> map, Vector2 start, Vector2 end, bool searchDiagonal = false, bool debug = false)
         {

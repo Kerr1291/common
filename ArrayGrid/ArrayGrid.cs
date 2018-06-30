@@ -1700,7 +1700,75 @@ namespace nv
                     elements[i] = type;
             }
         }
+                
+        public List<Vector2> GetPositionsOfAreasOfType(T type, Vector2 desiredSize)
+        {
+            List<Vector2> areas = new List<Vector2>();
+            ArrayGrid <int> goodPoints = new ArrayGrid<int>(Size, 0);
 
+            for(int j = IterJStart(Area); j < IterJEnd(Area); ++j)
+            {
+                int horizontalCount = 0;
+                for(int i = IterIStart(Area); i < IterIEnd(Area); ++i)
+                {
+                    if(!IsValidPosition(i, j))
+                        continue;
+
+                    if(EqualityComparer<T>.Default.Equals(this[i, j], type))
+                    {
+                        horizontalCount++;
+                    }
+                    else
+                    {
+                        horizontalCount = 0;
+                    }
+
+                    if(horizontalCount == (int)desiredSize.x)
+                    {
+                        goodPoints[i - (int)desiredSize.x + 1, j] = 1;
+                        horizontalCount--;
+                    }
+                }
+            }
+
+            for(int i = IterIStart(Area); i < IterIEnd(Area); ++i)
+            {
+                int verticalCount = 0;
+                for(int j = IterJStart(Area); j < IterJEnd(Area); ++j)
+                {
+                    if(!IsValidPosition(i, j))
+                        continue;
+
+                    if(EqualityComparer<T>.Default.Equals(this[i, j], type))
+                    {
+                        verticalCount++;
+                    }
+                    else
+                    {
+                        verticalCount = 0;
+                    }
+
+                    if(verticalCount == (int)desiredSize.y)
+                    {
+                        areas.Add(new Vector2(i, j - (int)desiredSize.y + 1));
+                        verticalCount--;
+                    }
+                }
+            }
+
+            return areas;
+        }
+
+        public bool GetPositionOfRandomAreaOfType(T type, Vector2 desiredSize, ref Vector2 position)
+        {
+            List<Vector2> areas = GetPositionsOfAreasOfType(type, desiredSize);
+            if(areas.Count <= 0)
+                return false;
+
+            position = areas.GetRandomElementFromList();
+
+            return true;
+        }
     }
 
     public static class ArrayGridExtensions
