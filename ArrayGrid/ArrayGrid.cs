@@ -1354,9 +1354,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1392,9 +1390,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1428,10 +1424,8 @@ namespace nv
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
-
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+                        
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1467,9 +1461,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1504,9 +1496,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1542,9 +1532,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1591,9 +1579,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1630,9 +1616,7 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            ffdata.cellsToFill.Add(pos);
-
-            Vector2 p = ffdata.cellsToFill[0];
+            Vector2 p = pos;
 
             Vector2 left = new Vector2(p.x - 1, p.y);
             Vector2 right = new Vector2(p.x + 1, p.y);
@@ -1725,7 +1709,7 @@ namespace nv
 
                     if(horizontalCount == (int)desiredSize.x)
                     {
-                        goodPoints[i - (int)desiredSize.x + 1, j] = 1;
+                        goodPoints[1 + i - (int)desiredSize.x, j] = 1;
                         horizontalCount--;
                     }
                 }
@@ -1739,7 +1723,7 @@ namespace nv
                     if(!IsValidPosition(i, j))
                         continue;
 
-                    if(EqualityComparer<T>.Default.Equals(this[i, j], type))
+                    if(goodPoints[i, j] == 1)
                     {
                         verticalCount++;
                     }
@@ -1750,7 +1734,7 @@ namespace nv
 
                     if(verticalCount == (int)desiredSize.y)
                     {
-                        areas.Add(new Vector2(i, j - (int)desiredSize.y + 1));
+                        areas.Add(new Vector2(i, 1 + j - (int)desiredSize.y));
                         verticalCount--;
                     }
                 }

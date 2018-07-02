@@ -110,6 +110,36 @@ namespace nv.Tests
 
             yield break;
         }
+
+        [Test]
+        [TestCase(100)]
+        [TestCase(1000)]
+        [TestCase(10000)]
+        [TestCase(100000)]
+        [TestCase(1000000)]
+        [TestCase(10000000)]
+        public void QuickCoinTossTest(int trials)
+        {
+            RNG rng = new RNG();
+
+            int[] counts = new int[] { 0, 0 };
+
+            for(int i = 0; i < trials; ++i)
+            {
+                counts[GameRNG.CoinToss() ? 1 : 0]++;
+            }
+
+            double oddsZero = (double)counts[0] / (double)trials;
+            double oddsOne = (double)counts[1] / (double)trials;
+
+            double errorZero = Math.Abs(.5 - oddsZero);
+            double errorOne = Math.Abs(.5 - oddsOne);
+
+            double allowedError = 0.01;
+
+            Assert.That(errorZero, Is.AtMost(allowedError), "Error of RNG CoinFlip for zero was too high. "+counts[0]+ " zeros and " + counts[1] + " ones ");
+            Assert.That(errorOne, Is.AtMost(allowedError), "Error of RNG CoinFlip for one was too high");
+        }
     }
 #endif
 }

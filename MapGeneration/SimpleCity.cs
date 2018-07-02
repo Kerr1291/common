@@ -10,11 +10,17 @@ namespace nv
         public Vector2 mapSize = new Vector2(100,100);
 
         public int requiredMinNumberOfBuildings = 5;
-        public Vector2 buildingSizeLimitX = new Vector2(5, 10);
-        public Vector2 buildingSizeLimitY = new Vector2(5, 10);
+
+        public Range buildingSizeLimitX = new Range(5f, 10f);
+        public Range buildingSizeLimitY = new Range(5f, 10f);
+
+        //public Vector2 buildingSizeLimitX = new Vector2(5, 10);
+        //public Vector2 buildingSizeLimitY = new Vector2(5, 10);
         public int innerBuildingRoomSize = 3;
 
         public int maxGenerationAttempts = 100;
+        int generationAttempts = 0;
+        int buildingCount = 0;
 
         [Range(0f,1f)]
         public float percentageOfGroundToFillWithTrees = .3f;
@@ -50,151 +56,34 @@ namespace nv
 
         public IEnumerator Generate()
         {
+            //cannot generate with nonzero map size
             if(mapSize.sqrMagnitude <= 0)
                 yield break;
+
+            generationAttempts = 0;
+            buildingCount = 0;
 
             ArrayGrid<MapElement> map;
 
             Debug.Log("Starting generation");
             for(;;)
             {
+                //brief yield before each genration attempt
                 yield return null;
-                map = new ArrayGrid<MapElement>(mapSize, defaultGroundFillElement);
+                map = CreateBaseMap();
 
+                //get the area to generate over
                 Rect main = map.Area;
 
-                AddRecursiveRooms(map, defaultCorridorElement, new Vector2(buildingSizeLimitX.x, buildingSizeLimitY.x), main, false);
+                //section the area into subsections using roads as separators
+                GenerateRoads(map, main);
 
-                int buildCount = 0;
-                int tries = 0;
-                while(buildCount < requiredMinNumberOfBuildings)
-                {
-                    int sizeX = (int)(buildingSizeLimitX.y * 2f);
-                    int sizeY = (int)(buildingSizeLimitY.y * 2f);
-                    int bufferSize = 2;
-                    Vector2 newBuildingAreaSize = new Vector2(sizeX + bufferSize, sizeY + bufferSize);
+                bool success = GenerateBuildings(map);
 
-                    for(;;)
-                    {
-                        Vector2 buildingPos = Vector2.zero;
-                        bool result = map.GetPositionOfRandomAreaOfType(defaultGroundFillElement, newBuildingAreaSize, ref buildingPos);
-                        if(result)
-                        {
-                            Debug.Log("making a room");
-                            Rect building = new Rect();
-                            Rect smaller = new Rect();
-
-                            buildingPos.x++;
-                            buildingPos.y++;
-
-                            building.min = buildingPos;
-                            building.max = new Vector2(sizeX, sizeY);
-
-                            smaller = building;
-
-                            smaller.min = smaller.min + Vector2.one;
-                            smaller.max = smaller.max - Vector2.one;
-
-                            map.FillArea(building, defaultBuildingWallElement);
-                            map.FillArea(smaller, defaultRoomElement);
-
-                            AddRecursiveRooms(map, defaultBuildingWallElement, new Vector2(innerBuildingRoomSize, innerBuildingRoomSize), smaller);
-
-                            // add a door leading out (improve to lead to nearest road)
-                            if(GameRNG.CoinToss())
-                            {
-                                if(GameRNG.CoinToss())
-                                {
-                                    int x = (int)building.min.x + GameRNG.Rand(sizeX - 2) + 1;
-                                    int y = (int)building.min.y;
-
-                                    map[x, y] = defaultDoorElement;
-                                }
-                                else
-                                {
-                                    int x = (int)building.min.x + GameRNG.Rand(sizeX - 2) + 1;
-                                    int y = (int)building.max.y - 1;
-
-                                    map[x, y] = defaultDoorElement;
-                                }
-                            }
-                            else
-                            {
-                                if(GameRNG.CoinToss())
-                                {
-                                    int x = (int)building.min.x;
-                                    int y = (int)building.min.y + GameRNG.Rand(sizeX - 2) + 1;
-
-                                    map[x, y] = defaultDoorElement;
-                                }
-                                else
-                                {
-                                    int x = (int)building.max.x - 1;
-                                    int y = (int)building.min.y + GameRNG.Rand(sizeX - 2) + 1;
-
-                                    map[x, y] = defaultDoorElement;
-                                }
-                            }
-
-                            buildCount++;
-                            if(buildCount >= requiredMinNumberOfBuildings)
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            if(GameRNG.CoinToss())
-                            {
-                                sizeX--;
-                            }
-                            else
-                            {
-                                sizeY--;
-                            }
-
-                            if(sizeX <= buildingSizeLimitX.x || sizeY <= buildingSizeLimitY.x)
-                            {
-                                tries++;
-                                break;
-                            }
-                        }
-                    }
-
-                    Debug.Log("Buildcount was "+buildCount);
-                }
-
-                
-                //Debug.Log("Planting trees");
                 // plant some trees
-                if(tries < maxGenerationAttempts)
+                if(success)
                 {
-                    var openGroundSpaces = map.GetPositionsOfType(defaultGroundFillElement);
-                    int spacesToFill = (int)(openGroundSpaces.Count * percentageOfGroundToFillWithTrees);
-                    Debug.Log("trees = " + spacesToFill);
-                    int abort = 0;
-                    for(int i = 0; i < spacesToFill; ++i)
-                    {
-                        Vector2 spotToFill = openGroundSpaces.GetRandomElementFromList();
-                        //Debug.Log("trying to put tree at " + spotToFill);
-                        var nearby = map.GetAdjacentElementsOfType(spotToFill, false, defaultBuildingWallElement);
-
-                        //TODO: fix this
-                        if(true || nearby.Count <= 0)
-                        {
-                            //Debug.Log("Planting tree at " + spotToFill);
-                            map[spotToFill] = defaultTreeElement;
-                            openGroundSpaces.Remove(spotToFill);
-                        }
-                        else
-                        {
-                            --i;
-                            abort++;
-                        }
-
-                        if(abort >= 10000)
-                            break;
-                    }
+                    GenerateTrees(map);
                     break;
                 }
             }
@@ -208,9 +97,154 @@ namespace nv
             yield break;
         }
 
+        private void GenerateRoads(ArrayGrid<MapElement> map, Rect main)
+        {
+            AddRecursiveRooms(map, defaultCorridorElement, new Vector2(buildingSizeLimitX.Max, buildingSizeLimitY.Max), main, false);
+        }
+
+        private void GenerateTrees(ArrayGrid<MapElement> map)
+        {
+            var openGroundSpaces = map.GetPositionsOfType(defaultGroundFillElement);
+            int spacesToFill = (int)(openGroundSpaces.Count * percentageOfGroundToFillWithTrees);
+            Debug.Log("trees = " + spacesToFill);
+            int abort = 0;
+            for(int i = 0; i < spacesToFill; ++i)
+            {
+                Vector2 spotToFill = openGroundSpaces.GetRandomElementFromList();
+                //Debug.Log("trying to put tree at " + spotToFill);
+                var nearby = map.GetAdjacentElementsOfType(spotToFill, true, defaultBuildingWallElement);
+
+                //TODO: fix this
+                if(nearby.Count <= 0)
+                {
+                    //Debug.Log("Planting tree at " + spotToFill);
+                    map[spotToFill] = defaultTreeElement;
+                    openGroundSpaces.Remove(spotToFill);
+                }
+                else
+                {
+                    --i;
+                    abort++;
+                }
+
+                if(abort >= 10000)
+                    break;
+            }
+        }
+
+        private bool GenerateBuildings(ArrayGrid<MapElement> map)
+        {
+            while(buildingCount < requiredMinNumberOfBuildings)
+            {
+                Vector2 roomSize = new Vector2((buildingSizeLimitX.Max * 2f), (buildingSizeLimitY.Max * 2f));
+                int bufferSize = 2;
+
+                for(;;)
+                {
+                    Vector2 newBuildingAreaSize = new Vector2(roomSize.x + bufferSize, roomSize.y + bufferSize);
+                    Vector2 buildingPos = Vector2.zero;
+                    bool result = map.GetPositionOfRandomAreaOfType(defaultGroundFillElement, newBuildingAreaSize, ref buildingPos);
+                    if(result)
+                    {
+                        Debug.Log("Creating a building at " + buildingPos + " of size " + roomSize);
+                        GenerateBuildingRooms(map, buildingPos, roomSize);
+                        //map.FillArea(new Rect(buildingPos, roomSize), defaultDoorElement);
+                        //map.FillArea(new Rect(buildingPos, Vector2.one), defaultTreeElement);
+                        buildingCount++;
+                        if(buildingCount >= requiredMinNumberOfBuildings)
+                            return true;
+                    }
+                    else
+                    {
+                        if(GameRNG.CoinToss())
+                        {
+                            roomSize.x -= 1f;
+                        }
+                        else
+                        {
+                            roomSize.y -= 1f;
+                        }
+
+                        //time to start over
+                        if(roomSize.x < buildingSizeLimitX.Min || roomSize.y < buildingSizeLimitY.Min)
+                        {
+                            Debug.Log("starting over because building size is too small and we don't have enough buildings. " + roomSize + " rooms so far: "+buildingCount);
+                            buildingCount = 0;
+                            generationAttempts++;
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        void GenerateBuildingRooms(ArrayGrid<MapElement> map, Vector2 buildingPos, Vector2 roomSize)
+        {
+            Rect building = new Rect();
+            Rect smaller = new Rect();
+
+            buildingPos.x++;
+            buildingPos.y++;
+
+            building.position = buildingPos;
+            building.size = roomSize;
+
+            smaller = building;
+
+            smaller.min = smaller.min + Vector2.one;
+            smaller.max = smaller.max - Vector2.one;
+
+            map.FillArea(building, defaultBuildingWallElement);
+            map.FillArea(smaller, defaultRoomElement);
+
+            AddRecursiveRooms(map, defaultBuildingWallElement, new Vector2(innerBuildingRoomSize, innerBuildingRoomSize), smaller);
+
+            // add a door leading out (improve to lead to nearest road)
+            if(GameRNG.CoinToss())
+            {
+                if(GameRNG.CoinToss())
+                {
+                    int x = (int)building.min.x + GameRNG.Rand((int)roomSize.x - 2) + 1;
+                    int y = (int)building.min.y;
+
+                    map[x, y] = defaultDoorElement;
+                }
+                else
+                {
+                    int x = (int)building.min.x + GameRNG.Rand((int)roomSize.x - 2) + 1;
+                    int y = (int)building.max.y - 1;
+
+                    map[x, y] = defaultDoorElement;
+                }
+            }
+            else
+            {
+                if(GameRNG.CoinToss())
+                {
+                    int x = (int)building.min.x;
+                    int y = (int)building.min.y + GameRNG.Rand((int)roomSize.y - 2) + 1;
+
+                    map[x, y] = defaultDoorElement;
+                }
+                else
+                {
+                    int x = (int)building.max.x - 1;
+                    int y = (int)building.min.y + GameRNG.Rand((int)roomSize.y - 2) + 1;
+
+                    map[x, y] = defaultDoorElement;
+                }
+            }
+        }
+
+        private ArrayGrid<MapElement> CreateBaseMap()
+        {
+            return new ArrayGrid<MapElement>(mapSize, defaultGroundFillElement);
+        }
+
         void AddRecursiveRooms(ArrayGrid<MapElement> map, MapElement roomElement, Vector2 minRoomSize, Rect room, bool withDoors = true)
         {
-            Dev.Where();
             int sizeX = (int)room.size.x;
             if(sizeX % 2 != 0)
             {
@@ -302,7 +336,7 @@ namespace nv
         Color WriteColor(int type)
         {
             if(type == 1)
-                return Color.clear;
+                return Color.green;
             if(type == 2)
                 return Color.grey;
             if(type == 3)
