@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using System.Collections.Generic;
-
+using System.Linq;
 using Meisui.Random;
 
 namespace nv
@@ -274,6 +274,15 @@ namespace nv
         public T RandomElement<T>(List<T> elements)
         {
             return elements[Rand(0, elements.Count)];
+        }
+
+        public void RandomShuffle<T>(List<T> elements)
+        {
+            int n = elements.Count();
+            for(int i = n-1; i > 0; --i)
+            {
+                Mathnv.Swap(elements, i, Rand(i + 1));
+            }
         }
     }
 }

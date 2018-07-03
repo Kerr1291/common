@@ -654,12 +654,13 @@ namespace nv
 			}
 		}
 
-		/// <summary>
-		/// Draw a SerializedProperty as a ReorderableList if it was found during
-		/// initialization, otherwise use EditorGUILayout.PropertyField
-		/// </summary>
-		/// <param name="property"></param>
-		protected void DrawPropertySortableArray(SerializedProperty property)
+        /// <summary>
+        /// Draw a SerializedProperty as a ReorderableList if it was found during
+        /// initialization, otherwise use EditorGUILayout.PropertyField
+        /// </summary>
+        /// <param name="property"></param>
+        int typeSelection = 0;
+        protected void DrawPropertySortableArray(SerializedProperty property)
 		{
 			// Try to get the sortable list this property belongs to
 			SortableListData listData = null;
@@ -701,19 +702,36 @@ namespace nv
 				if (scriptableEditor == null)
 				{
 					bool doCreate;
-					using (new EditorGUILayout.HorizontalScope())
+                    List<Type> subclasses = new List<Type>();
+                    using (new EditorGUILayout.HorizontalScope())
 					{
 						EditorGUILayout.PropertyField(property, uiExpandWidth);
 						using (new EditorGUILayout.VerticalScope(uiWidth50))
-						{
-							if (hasSpace) GUILayout.Space(10);
-							doCreate = GUILayout.Button(labelBtnCreate, EditorStyles.miniButton);
+                        {
+                            using(new EditorGUILayout.HorizontalScope())
+                            {
+                                Type propType = property.GetTypeReflection();
+                                subclasses = Assembly.GetAssembly(propType).GetTypes().Where(x => x.IsSubclassOf(propType)).ToList();
+
+                                if(subclasses.Count > 0)
+                                {
+                                    typeSelection = EditorGUILayout.Popup(typeSelection, subclasses.Select(x => x.Name).ToArray());
+                                }
+
+                                if(hasSpace) GUILayout.Space(10);
+                                doCreate = GUILayout.Button(labelBtnCreate, EditorStyles.miniButton);
+                            }
 						}
 					}
 
 					if (doCreate)
 					{
 						Type propType = property.GetTypeReflection();
+                        if(subclasses.Count > 0)
+                        {
+                            propType = subclasses[typeSelection];
+                        }
+
 						var createdAsset = CreateAssetWithSavePrompt(propType, "Assets");
 						if (createdAsset != null)
 						{

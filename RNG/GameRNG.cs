@@ -173,5 +173,10 @@ namespace nv
         {
             return Instance.rng.RandomElement(elements);
         }
+
+        public static void RandomShuffle<T>(List<T> elements)
+        {
+            Instance.rng.RandomShuffle(elements);
+        }
     }
 }

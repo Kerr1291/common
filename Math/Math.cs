@@ -123,6 +123,14 @@ namespace nv
             rhs = temp;
         }
 
+        public static void Swap<T>( IList<T> list, int indexA, int indexB)
+        {
+            T temp;
+            temp = list[indexA];
+            list[indexA] = list[indexB];
+            list[indexB] = temp;
+        }
+
         public static void Sort2<T>( ref T out_val0, ref T out_val1 ) where T : System.IComparable<T>
         {
             if( out_val0.CompareTo( out_val1 ) > 0 )

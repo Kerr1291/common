@@ -5,10 +5,8 @@ using UnityEngine;
 
 namespace nv
 {
-    public class SimpleCity : ScriptableObject
+    public class SimpleCity : ProcGenMap
     {
-        public Vector2 mapSize = new Vector2(100,100);
-
         public int requiredMinNumberOfBuildings = 5;
 
         public Range buildingSizeLimitX = new Range(5f, 10f);
@@ -26,9 +24,6 @@ namespace nv
         public float percentageOfGroundToFillWithTrees = .3f;
 
         [EditScriptable]
-        public MapElement defaultGroundFillElement;
-
-        [EditScriptable]
         public MapElement defaultRoomElement;
 
         [EditScriptable]
@@ -43,18 +38,7 @@ namespace nv
         [EditScriptable]
         public MapElement defaultTreeElement;
 
-        IEnumerator WriteToFile(Texture2D tex, string filepath)
-        {
-            yield return new WaitForEndOfFrame();
-
-            // Encode texture into PNG
-            byte[] bytes = tex.EncodeToPNG();
-            File.WriteAllBytes(filepath, bytes);
-
-            yield break;
-        }
-
-        public IEnumerator Generate()
+        public override IEnumerator Generate()
         {
             //cannot generate with nonzero map size
             if(mapSize.sqrMagnitude <= 0)
@@ -89,10 +73,7 @@ namespace nv
             }
 
             Debug.Log("Done");
-
-            string testOutputPath = "Assets/common/MapGeneration/";
-            Texture2D debugOutput = map.ArrayGridToTexture(WriteColor);
-            yield return WriteToFile(debugOutput, testOutputPath + "SimpleCity.png");
+            yield return WriteTestOutput(map);
 
             yield break;
         }
@@ -104,7 +85,7 @@ namespace nv
 
         private void GenerateTrees(ArrayGrid<MapElement> map)
         {
-            var openGroundSpaces = map.GetPositionsOfType(defaultGroundFillElement);
+            var openGroundSpaces = map.GetPositionsOfType(defaultFillElement);
             int spacesToFill = (int)(openGroundSpaces.Count * percentageOfGroundToFillWithTrees);
             Debug.Log("trees = " + spacesToFill);
             int abort = 0;
@@ -143,7 +124,7 @@ namespace nv
                 {
                     Vector2 newBuildingAreaSize = new Vector2(roomSize.x + bufferSize, roomSize.y + bufferSize);
                     Vector2 buildingPos = Vector2.zero;
-                    bool result = map.GetPositionOfRandomAreaOfType(defaultGroundFillElement, newBuildingAreaSize, ref buildingPos);
+                    bool result = map.GetPositionOfRandomAreaOfType(defaultFillElement, newBuildingAreaSize, ref buildingPos);
                     if(result)
                     {
                         Debug.Log("Creating a building at " + buildingPos + " of size " + roomSize);
@@ -238,11 +219,6 @@ namespace nv
             }
         }
 
-        private ArrayGrid<MapElement> CreateBaseMap()
-        {
-            return new ArrayGrid<MapElement>(mapSize, defaultGroundFillElement);
-        }
-
         void AddRecursiveRooms(ArrayGrid<MapElement> map, MapElement roomElement, Vector2 minRoomSize, Rect room, bool withDoors = true)
         {
             int sizeX = (int)room.size.x;
@@ -326,30 +302,6 @@ namespace nv
                 newRoom.min = newMin;
                 AddRecursiveRooms(map, roomElement, minRoomSize, newRoom, withDoors);
             }
-        }
-
-        Color WriteColor(MapElement type)
-        {
-            return WriteColor(type.type);
-        }
-
-        Color WriteColor(int type)
-        {
-            if(type == 1)
-                return Color.green;
-            if(type == 2)
-                return Color.grey;
-            if(type == 3)
-                return Color.white;
-            if(type == 4)
-                return Color.blue;
-            if(type == 5)
-                return Color.red;
-            if(type == 6)
-                return Color.yellow;
-            if(type == 7)
-                return Color.cyan;
-            return Color.clear;
         }
     }
 }

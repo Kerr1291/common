@@ -8,6 +8,7 @@ namespace nv
     public class MapElement : ScriptableObject, IEqualityComparer
     {
         public int type;
+        public int value;
 
         public new bool Equals(object x, object y)
         {
