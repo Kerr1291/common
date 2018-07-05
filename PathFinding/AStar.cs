@@ -15,10 +15,17 @@ namespace nv
         public List<Vector2Int> debugPath;
 
         public int throttle = 10000;
+        
+        /// <summary>
+        /// Used to determine cost of pathing from -> to positions on the given map
+        /// </summary>
+        public delegate float CostFunc<T>(ArrayGrid<T> map, Vector2Int from, Vector2Int to);
 
-        public IEnumerator FindPath<T>(ArrayGrid<T> map, Vector2Int start, Vector2Int end, bool searchDiagonal = false, bool debug = false)
+        public IEnumerator FindPath<T>(ArrayGrid<T> map, Vector2Int start, Vector2Int end, CostFunc<T> costFunc = null, bool searchDiagonal = false, bool debug = false)
         {
             result = null;
+
+            var pathCostFunc = costFunc ?? GetCost;
 
             //we'll use var here for now so we can change the type easier later
             // The set of nodes already evaluated
@@ -95,7 +102,8 @@ namespace nv
                     }
 
                     // The distance from start to a neighbor
-                    float gScoreTemp = gScore[current.Value] + GetCost(map, current.Value, neighbors[i]);
+
+                    float gScoreTemp = gScore[current.Value] + pathCostFunc(map, current.Value, neighbors[i]);
                     if(gScoreTemp >= gScore[neighbors[i]])
                     {
                         if(addToOpen)

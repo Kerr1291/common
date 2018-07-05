@@ -102,7 +102,7 @@ public class MapScene : MonoBehaviour {
                 pathFinder.throttle = 100;
 
                 //pathFinder.throttleIterations = 100;
-                IEnumerator runningPathFinder = pathFinder.FindPath(map, startPositions[0], startPositions[1],true,true);
+                IEnumerator runningPathFinder = pathFinder.FindPath(map, startPositions[0], startPositions[1], null, true, true);
                 runningPathFinder.MoveNext();
                 while(pathFinder.result == null)
                 {

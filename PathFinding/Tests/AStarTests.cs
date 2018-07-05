@@ -60,7 +60,7 @@ namespace nv.Tests
             bool debug = false;
 
             AStar pathFinder = new AStar();
-            yield return pathFinder.FindPath(map, start, end, searchDiagonal, debug);
+            yield return pathFinder.FindPath(map, start, end, null, searchDiagonal, debug);
             
             Assert.That(pathFinder.result != null, Is.True, "Path failed to generate.");
             yield break;
@@ -78,7 +78,7 @@ namespace nv.Tests
             bool debug = false;
 
             AStar pathFinder = new AStar();
-            yield return pathFinder.FindPath(map, start, end, searchDiagonal, debug);
+            yield return pathFinder.FindPath(map, start, end, null, searchDiagonal, debug);
 
             Assert.That(pathFinder.result != null, Is.True, "Path failed to generate.");
             yield break;
@@ -96,7 +96,7 @@ namespace nv.Tests
             bool debug = false;
 
             AStar pathFinder = new AStar();
-            yield return pathFinder.FindPath(map, start, end, searchDiagonal, debug);
+            yield return pathFinder.FindPath(map, start, end, null, searchDiagonal, debug);
 
             Assert.That(pathFinder.result != null, Is.True, "Path failed to generate.");
 
@@ -111,9 +111,10 @@ namespace nv.Tests
             yield break;
         }
 
+        //TODO: move into rng test set
         [Test]
-        [TestCase(100)]
-        [TestCase(1000)]
+        [TestCase(100)] //expect fail
+        [TestCase(1000)]//expect fail
         [TestCase(10000)]
         [TestCase(100000)]
         [TestCase(1000000)]
