@@ -932,7 +932,7 @@ namespace nv
                 return;
 
             //if we try to select a flood fill that starts on a boundry, abort
-            if(!boundry_mask.Contains(this[start_point]))
+            if(boundry_mask.Contains(this[start_point]))
                 return;
 
             FloodFillData ffdata = new FloodFillData();
@@ -1784,6 +1784,38 @@ namespace nv
             }
             tex.Apply();
             return tex;
+        }
+
+        public static List<List<U>> ArrayGridToData<T,U>(this ArrayGrid<T> data, System.Func<T, U> toData = null)
+        {
+            List<List<U>> outData = (new List<U>[data.h]).ToList();
+            for(int i = 0; i < outData.Count; ++i)
+            {
+                outData[i] = (new U[data.w]).ToList();
+            }
+
+            for(int j = 0; j < (int)data.h; ++j)
+            {
+                for(int i = 0; i < (int)data.w; ++i)
+                {
+                    if(toData == null)
+                    {
+                        if(data[i, j] != null)
+                        {
+                            outData[i][j] = default(U);
+                        }
+                        else
+                        {
+                            //outData[i][j] = default(U);
+                        }
+                    }
+                    else
+                    {
+                        outData[i][j] = toData(data[i, j]);
+                    }
+                }
+            }
+            return outData;
         }
     }
 }

@@ -8,6 +8,7 @@ namespace nv
 {
     public class StandardDungeon : ProcGenMap
     {
+        public int roomNumberOffset = 1000;
         public int maxNumberOfRooms = 10;
         public bool placeDoors = true;
 
@@ -57,7 +58,6 @@ namespace nv
                 valueMap = new ArrayGrid<int>(mapSize, 0);
 
                 Vector2Int p = Vector2Int.zero;
-                Vector2Int room = Vector2Int.zero;
                 Vector2Int roomSize = Vector2Int.zero;
                 
                 for(int i = 0; i < maxNumberOfRooms; ++i)
@@ -72,18 +72,28 @@ namespace nv
                         {
                             for(int x = 1; x < roomSize.x - 1; ++x)
                             {
-                                map[x, y] = defaultRoomElement;
+                                map[p.x + x, p.y + y] = defaultRoomElement;
                             }
                         }
                     }
                 }
 
                 ConnectClosestRooms(map, valueMap, true, true);
+                ConvertValuesToTiles(map, valueMap);
+
+                if(placeDoors)
+                    AddDoors(map, valueMap);
+
+                //TODO: logic to check if dungeon is valid
 
                 generationAttempts++;
+                break;
             }
 
+            Debug.Log("Done");
+
             yield return WriteTestOutput(map);
+            yield return WriteTestOutput(valueMap);
 
             yield break;
         }
@@ -100,10 +110,11 @@ namespace nv
         IEnumerator<Vector2Int> IterateOverMap<T>(ArrayGrid<T> map)
         {
             var yIter = IterateOver(0, map.h);
-            var xIter = IterateOver(0, map.w);
 
             while(yIter.MoveNext())
             {
+                var xIter = IterateOver(0, map.w);
+
                 while(xIter.MoveNext())
                 {
                     yield return new Vector2Int(xIter.Current, yIter.Current);
@@ -114,10 +125,11 @@ namespace nv
         IEnumerator<Vector2Int> IterateOverArea(int w, int h)
         {
             var yIter = IterateOver(0, h);
-            var xIter = IterateOver(0, w);
 
             while(yIter.MoveNext())
             {
+                var xIter = IterateOver(0, w);
+
                 while(xIter.MoveNext())
                 {
                     yield return new Vector2Int(xIter.Current, yIter.Current);
@@ -149,7 +161,7 @@ namespace nv
                 Vector2Int current = mapIter.Current;
                 if(valueMap[current] == defaultRoomElement.value)
                 {
-                    valueMap.FloodFill(current, new List<int>() { defaultWallElement.value }, false, roomNumber++);
+                    valueMap.FloodFill(current, new List<int>() { defaultWallElement.value }, false, roomNumberOffset + (roomNumber++));
                 }
             }
 
@@ -160,8 +172,13 @@ namespace nv
         {
             int roomCount = 0;
             FillDisconnectedRoomsWithDifferentValues(map, valueMap, ref roomCount);
-
+            
             List< List<Vector2Int> > rooms = (new List<Vector2Int>[roomCount]).ToList();
+
+            for(int i = 0; i < rooms.Count; ++i)
+            {
+                rooms[i] = new List<Vector2Int>();
+            }
 
             IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
 
@@ -172,10 +189,8 @@ namespace nv
                 {
                     if(valueMap.GetAdjacentElementsOfType(current, false, defaultWallElement.value).Count > 0)
                     {
-                        if(rooms[valueMap[current]] == null)
-                            rooms[valueMap[current]] = new List<Vector2Int>();
-
-                        rooms[valueMap[current]].Add(current);
+                        int roomIndex = valueMap[current] - roomNumberOffset;
+                        rooms[roomIndex].Add(current);
                     }
                 }
             }
@@ -213,28 +228,26 @@ namespace nv
             while(roomAreas.MoveNext())
             {
                 Vector2Int ci = roomAreas.Current;
-                int ciX = (int)ci.x;
-                int ciY = (int)ci.y;
-                if(ciX == ciY)
+                if(ci.x == ci.y)
                     continue;
 
                 KeyValuePair<Vector2Int, Vector2Int> closestCells = new KeyValuePair<Vector2Int, Vector2Int>();
                 
-                foreach(Vector2Int cellA in rooms[ciX])
+                foreach(Vector2Int cellA in rooms[ci.x])
                 {
-                    foreach(Vector2Int cellB in rooms[ciY])
+                    foreach(Vector2Int cellB in rooms[ci.y])
                     {
                         int distAB = (int)Vector2Int.Distance(cellA, cellB);
 
-                        if((distAB < distanceMatrix[ciX][ciY]) || (distAB == distanceMatrix[ciX][ciY] && GameRNG.CoinToss()))
+                        if((distAB < distanceMatrix[ci.x][ci.y]) || (distAB == distanceMatrix[ci.x][ci.y] && GameRNG.CoinToss()))
                         {
                             closestCells = new KeyValuePair<Vector2Int, Vector2Int>(cellA, cellB);
-                            distanceMatrix[ciX][ciY] = distAB;
+                            distanceMatrix[ci.x][ci.y] = distAB;
                         }
                     }
                 }
 
-                closestCellsMatrix[ciX][ciY] = closestCells;
+                closestCellsMatrix[ci.x][ci.y] = closestCells;
             }
 
 
@@ -378,106 +391,93 @@ namespace nv
                 {
                     while(p0.y != p1.y)
                     {
+                        p0.y += dir.y;
+                        if(valueMap[p0] == defaultWallElement.value)
+                        {
+                            valueMap[p0] = defaultCorridorElement.value;
+                        }
+                    }
 
+                    if(valueMap[p0] == defaultWallElement.value)
+                    {
+                        valueMap[p0] = defaultCorridorElement.value;
+                    }
+
+                    return true;
+                }
+
+                if(p0.y == p1.y)
+                {
+                    while(p0.x != p1.x)
+                    {
+                        p0.x += dir.x;
+                        if(valueMap[p0] == defaultWallElement.value)
+                        {
+                            valueMap[p0] = defaultCorridorElement.value;
+                        }
+                    }
+
+                    if(valueMap[p0] == defaultWallElement.value)
+                    {
+                        valueMap[p0] = defaultCorridorElement.value;
+                    }
+
+                    return true;
+                }
+
+            }
+
+            return true;
+        }
+
+        protected void ConvertValuesToTiles(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap)
+        {
+            IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
+
+            while(mapIter.MoveNext())
+            {
+                Vector2Int current = mapIter.Current;
+                if(valueMap[current] == defaultCorridorElement.value)
+                {
+                    map[current] = defaultCorridorElement;
+                }
+                else if(valueMap[current] == defaultWallElement.value)
+                {
+                    map[current] = defaultWallElement;
+                }
+                else 
+                {
+                    map[current] = defaultRoomElement;
+                }
+            }
+        }
+
+        protected void AddDoors(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, float doorProbability = 1f)
+        {
+            IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
+
+            while(mapIter.MoveNext())
+            {
+                Vector2Int current = mapIter.Current;
+                var adjacentElements = map.GetAdjacentElements(current, true);
+
+                int roomCells = adjacentElements.Where(x => x == defaultRoomElement).Count();
+                int corridorCells = adjacentElements.Where(x => x == defaultCorridorElement).Count();
+                int doorCells = adjacentElements.Where(x => x == defaultDoorElement).Count();
+
+                if(map[current] == defaultCorridorElement)
+                {
+                    if((corridorCells == 1 && doorCells == 0 && roomCells > 0 && roomCells < 4)
+                     ||(corridorCells == 0 && doorCells == 0))
+                    {
+                        float exist = GameRNG.Rand(0f, 1000f) / 1000f;
+                        if(exist < doorProbability)
+                        {
+                            map[current] = defaultDoorElement;
+                        }
                     }
                 }
             }
-
-            return false;
         }
-
-        /*
-        
-	inline
-	bool AddCorridor(CMap &level, const int& start_x1, const int& start_y1, const int& start_x2, const int& start_y2, bool straight=false)
-	{	
-			// connect corridors if on the same level
-			if (x1==x2)
-			{
-				while(y1!=y2)
-				{
-					y1+=dir_y;
-					if (level.GetCell(x1,y1)==LevelElementWall_value)
-						level.SetCell(x1,y1,LevelElementCorridor_value);
-				}
-				if (level.GetCell(x1,y1)==LevelElementWall_value)
-					level.SetCell(x1,y1,LevelElementCorridor_value);
-				return true;
-			}
-			if (y1==y2)
-			{
-				while(x1!=x2)
-				{
-					x1+=dir_x;
-					if (level.GetCell(x1,y1)==LevelElementWall_value)
-						level.SetCell(x1,y1,LevelElementCorridor_value);
-				}
-				if (level.GetCell(x1,y1)==LevelElementWall_value)
-					level.SetCell(x1,y1,LevelElementCorridor_value);
-				return true;
-			}
-		}
-		return true;
-	}
-        */
-
-        protected void ConvertValuesToTiles()
-        {
-            /*
-            
-		for (unsigned int  y=0;y<level.GetHeight();++y)
-		{
-			for (unsigned int  x=0;x<level.GetWidth();++x)
-			{
-				if (level.GetCell(x,y)==LevelElementCorridor_value)
-					level.SetCell(x,y,LevelElementCorridor);
-				else if (level.GetCell(x,y)==LevelElementWall_value)
-					level.SetCell(x,y,LevelElementWall);
-				else 
-					level.SetCell(x,y,LevelElementRoom);
-			}
-		}
-            */
-        }
-
-        protected void AddDoors()
-        {
-            /*
-            
-	inline
-	void AddDoors(CMap &level, float door_probability, float open_probability)
-	{
-		for (unsigned int  x=0;x<level.GetWidth();++x)
-			for (unsigned int  y=0;y<level.GetHeight();++y)
-			{
-				Position pos(x,y);
-				int room_cells = CountNeighboursOfType(level,LevelElementRoom,pos);
-				int corridor_cells = CountNeighboursOfType(level,LevelElementCorridor,pos);
-				int open_door_cells = CountNeighboursOfType(level,LevelElementDoorOpen,pos);
-				int close_door_cells = CountNeighboursOfType(level,LevelElementDoorClose,pos);
-				int door_cells = open_door_cells + close_door_cells;
-
-				if (level.GetCell(x,y)==LevelElementCorridor)
-				{
-					if ((corridor_cells==1 && door_cells==0 && room_cells>0 && room_cells<4) ||
-						(corridor_cells==0 && door_cells==0))
-					{
-						float exist = ((float) Random(1000))/1000;
-						if (exist<door_probability)
-						{
-							float is_open = ((float) Random(1000))/1000;
-							if (is_open<open_probability)
-								level.SetCell(x,y,LevelElementDoorOpen);
-							else
-								level.SetCell(x,y,LevelElementDoorClose);
-						}
-					}
-				} 
-			}
-	}
-            */
-        }
-
-
     }
 }
