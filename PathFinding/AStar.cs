@@ -11,12 +11,12 @@ namespace nv
     //using a SortedDictionary
     public class AStar
     {
-        public List<Vector2> result;
-        public List<Vector2> debugPath;
+        public List<Vector2Int> result;
+        public List<Vector2Int> debugPath;
 
         public int throttle = 10000;
 
-        public IEnumerator FindPath<T>(ArrayGrid<T> map, Vector2 start, Vector2 end, bool searchDiagonal = false, bool debug = false)
+        public IEnumerator FindPath<T>(ArrayGrid<T> map, Vector2Int start, Vector2Int end, bool searchDiagonal = false, bool debug = false)
         {
             result = null;
 
@@ -26,14 +26,14 @@ namespace nv
 
             // The set of currently discovered nodes that are not evaluated yet.
             // Initially, only the start node is known.
-            //var open = new List<Vector2>() { start };
-            var open = new SortedDictionary<HeapKey, Vector2>();
+            //var open = new List<Vector2Int>() { start };
+            var open = new SortedDictionary<HeapKey, Vector2Int>();
             var openPositions = new Dictionary<int, List<int>>();
 
             // For each node, which node it can most efficiently be reached from.
             // If a node can be reached from many nodes, cameFrom will eventually contain the
             // most efficient previous step.
-            ArrayGrid<Vector2> cameFrom = new ArrayGrid<Vector2>(map.Size);
+            ArrayGrid<Vector2Int> cameFrom = new ArrayGrid<Vector2Int>(map.Size);
 
             // For each node, the cost of getting from the start node to that node.
             ArrayGrid<float> gScore = new ArrayGrid<float>(map.Size, float.MaxValue);
@@ -57,7 +57,7 @@ namespace nv
                 if(throttleCounter % throttle == 0)
                     yield return new WaitForEndOfFrame();
 
-                KeyValuePair<HeapKey, Vector2> current = open.First();
+                KeyValuePair<HeapKey, Vector2Int> current = open.First();
 
                 if(IsGoal(current.Value, end))
                 {
@@ -71,14 +71,14 @@ namespace nv
                 if(debug)
                 {
                     if(debugPath == null)
-                        debugPath = new List<Vector2>();
+                        debugPath = new List<Vector2Int>();
 
                     debugPath.Add(current.Value);
                 }
 
                 AddToSet(closed, (int)current.Value.x, (int)current.Value.y);
 
-                List<Vector2> neighbors = map.GetAdjacentPositions(current.Value, searchDiagonal);
+                List<Vector2Int> neighbors = map.GetAdjacentPositions(current.Value, searchDiagonal);
 
                 for(int i = 0; i < neighbors.Count; ++i)
                 {
@@ -118,11 +118,11 @@ namespace nv
             yield break;
         }
 
-        List<Vector2> ReconstructPath(ArrayGrid<Vector2> cameFrom, Vector2 start, Vector2 reconstructionStartPoint)
+        List<Vector2Int> ReconstructPath(ArrayGrid<Vector2Int> cameFrom, Vector2Int start, Vector2Int reconstructionStartPoint)
         {
-            List<Vector2> path = new List<Vector2>();
+            List<Vector2Int> path = new List<Vector2Int>();
             path.Add(reconstructionStartPoint);
-            Vector2 current = reconstructionStartPoint;
+            Vector2Int current = reconstructionStartPoint;
             while(!IsGoal(current, start))
             {
                 current = cameFrom[current];
@@ -131,12 +131,12 @@ namespace nv
             return path;
         }
 
-        float GetCostEstimate<T>(ArrayGrid<T> map, Vector2 from, Vector2 to)
+        float GetCostEstimate<T>(ArrayGrid<T> map, Vector2Int from, Vector2Int to)
         {
             return (to - from).magnitude;
         }
 
-        float GetCost<T>(ArrayGrid<T> map, Vector2 from, Vector2 to)
+        float GetCost<T>(ArrayGrid<T> map, Vector2Int from, Vector2Int to)
         {
             if(!map.IsPositionEmpty(to))
             {
@@ -146,7 +146,7 @@ namespace nv
             return (to - from).magnitude;
         }
 
-        void AddToOpen(SortedDictionary<HeapKey, Vector2> openSorted, Dictionary<int, List<int>> openLookup, float fScore, Vector2 position)
+        void AddToOpen(SortedDictionary<HeapKey, Vector2Int> openSorted, Dictionary<int, List<int>> openLookup, float fScore, Vector2Int position)
         {
             openSorted.Add(new HeapKey(Guid.NewGuid(), fScore), position);
             AddToSet(openLookup, (int)position.x, (int)position.y);
@@ -184,9 +184,9 @@ namespace nv
             return false;
         }
 
-        static bool IsGoal(Vector2 start, Vector2 end)
+        static bool IsGoal(Vector2Int start, Vector2Int end)
         {
-            return ((end - start).SqrMagnitude() < Mathf.Epsilon);
+            return ((end - start).sqrMagnitude < Mathf.Epsilon);
         }
 
         //taken from: https://stackoverflow.com/questions/41319/checking-if-a-list-is-empty-with-linq

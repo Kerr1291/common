@@ -30,9 +30,6 @@ namespace nv
         [EditScriptable]
         public MapElement defaultDoorElement;
 
-
-        ArrayGrid<int> valueMap;
-
         public override IEnumerator Generate()
         {
             //cannot generate with nonzero map size
@@ -43,6 +40,7 @@ namespace nv
             roomCount = 0;
 
             ArrayGrid<MapElement> map = null;
+            ArrayGrid<int> valueMap = null;
 
             Debug.Log("Starting generation");
             for(;;)
@@ -58,14 +56,14 @@ namespace nv
                 map = CreateBaseMap();
                 valueMap = new ArrayGrid<int>(mapSize, 0);
 
-                Vector2 p = Vector2.zero;
-                Vector2 room = Vector2.zero;
-                Vector2 roomSize = Vector2.zero;
+                Vector2Int p = Vector2Int.zero;
+                Vector2Int room = Vector2Int.zero;
+                Vector2Int roomSize = Vector2Int.zero;
                 
                 for(int i = 0; i < maxNumberOfRooms; ++i)
                 {
-                    roomSize.x = roomSizeLimitX.RandomValue();
-                    roomSize.y = roomSizeLimitY.RandomValue();
+                    roomSize.x = roomSizeLimitX.RandomValuei();
+                    roomSize.y = roomSizeLimitY.RandomValuei();
                     
                     bool result = map.GetPositionOfRandomAreaOfType(defaultFillElement, roomSize, ref p);
                     if(result)
@@ -78,7 +76,9 @@ namespace nv
                             }
                         }
                     }
-                }                    
+                }
+
+                ConnectClosestRooms(map, valueMap, true, true);
 
                 generationAttempts++;
             }
@@ -97,7 +97,7 @@ namespace nv
             yield break;
         }
 
-        IEnumerator<Vector2> IterateOverMap<T>(ArrayGrid<T> map)
+        IEnumerator<Vector2Int> IterateOverMap<T>(ArrayGrid<T> map)
         {
             var yIter = IterateOver(0, map.h);
             var xIter = IterateOver(0, map.w);
@@ -106,18 +106,32 @@ namespace nv
             {
                 while(xIter.MoveNext())
                 {
-                    yield return new Vector2(xIter.Current, yIter.Current);
+                    yield return new Vector2Int(xIter.Current, yIter.Current);
                 }
             }
         }
 
-        protected void FillDisconnectedRoomsWithDifferentValues(ArrayGrid<MapElement> map, ref int countOfRoomsFilled)
+        IEnumerator<Vector2Int> IterateOverArea(int w, int h)
         {
-            IEnumerator<Vector2> mapIter = IterateOverMap(map);
+            var yIter = IterateOver(0, h);
+            var xIter = IterateOver(0, w);
+
+            while(yIter.MoveNext())
+            {
+                while(xIter.MoveNext())
+                {
+                    yield return new Vector2Int(xIter.Current, yIter.Current);
+                }
+            }
+        }
+
+        protected void FillDisconnectedRoomsWithDifferentValues(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, ref int countOfRoomsFilled)
+        {
+            IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
 
             while(mapIter.MoveNext())
             {
-                Vector2 current = mapIter.Current;
+                Vector2Int current = mapIter.Current;
                 if(map[current] == defaultRoomElement)
                 {
                     valueMap[current] = defaultRoomElement.value;
@@ -132,7 +146,7 @@ namespace nv
             int roomNumber = 0;
             while(mapIter.MoveNext())
             {
-                Vector2 current = mapIter.Current;
+                Vector2Int current = mapIter.Current;
                 if(valueMap[current] == defaultRoomElement.value)
                 {
                     valueMap.FloodFill(current, new List<int>() { defaultWallElement.value }, false, roomNumber++);
@@ -142,24 +156,24 @@ namespace nv
             countOfRoomsFilled = roomNumber;
         }
 
-        protected void ConnectClosestRooms(ArrayGrid<MapElement> map, bool withDoors, bool straightConnection = false)
+        protected void ConnectClosestRooms(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, bool withDoors, bool straightConnections = false)
         {
             int roomCount = 0;
-            FillDisconnectedRoomsWithDifferentValues(map, ref roomCount);
+            FillDisconnectedRoomsWithDifferentValues(map, valueMap, ref roomCount);
 
-            List< List<Vector2> > rooms = (new List<Vector2>[roomCount]).ToList();
+            List< List<Vector2Int> > rooms = (new List<Vector2Int>[roomCount]).ToList();
 
-            IEnumerator<Vector2> mapIter = IterateOverMap(map);
+            IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
 
             while(mapIter.MoveNext())
             {
-                Vector2 current = mapIter.Current;
+                Vector2Int current = mapIter.Current;
                 if(valueMap[current] != defaultWallElement.value)
                 {
-                    if(valueMap.GetAdjacentElementsOfType(current,false,defaultWallElement.value).Count > 0)
+                    if(valueMap.GetAdjacentElementsOfType(current, false, defaultWallElement.value).Count > 0)
                     {
                         if(rooms[valueMap[current]] == null)
-                            rooms[valueMap[current]] = new List<Vector2>();
+                            rooms[valueMap[current]] = new List<Vector2Int>();
 
                         rooms[valueMap[current]].Add(current);
                     }
@@ -177,14 +191,14 @@ namespace nv
             List<List<bool>> roomConnections = (new List<bool>[rooms.Count]).ToList();
             List<List<bool>> transitiveClosure = (new List<bool>[rooms.Count]).ToList(); ;
             List<List<int>> distanceMatrix = (new List<int>[rooms.Count]).ToList();
-            List<List<KeyValuePair<Vector2, Vector2>>> closestCellsMatrix = (new List<KeyValuePair<Vector2, Vector2>>[rooms.Count]).ToList();
+            List<List<KeyValuePair<Vector2Int, Vector2Int>>> closestCellsMatrix = (new List<KeyValuePair<Vector2Int, Vector2Int>>[rooms.Count]).ToList();
 
             for(int a = 0; a < rooms.Count; ++a)
             {
                 roomConnections[a] = (new bool[rooms.Count]).ToList();
                 transitiveClosure[a] = (new bool[rooms.Count]).ToList();
                 distanceMatrix[a] = (new int[rooms.Count]).ToList();
-                closestCellsMatrix[a] = (new KeyValuePair<Vector2, Vector2>[rooms.Count]).ToList();
+                closestCellsMatrix[a] = (new KeyValuePair<Vector2Int, Vector2Int>[rooms.Count]).ToList();
 
                 for(int b = 0; b < rooms.Count; ++b)
                 {
@@ -193,145 +207,219 @@ namespace nv
                 }
             }
 
+            IEnumerator<Vector2Int> roomAreas = IterateOverArea(rooms.Count, rooms.Count);
 
             // find the closest cells for each room - Random closest cell
-            for(int roomA = 0; roomA < rooms.Count; ++roomA)
+            while(roomAreas.MoveNext())
             {
-                for(int roomB = 0; roomB < rooms.Count; ++roomB)
+                Vector2Int ci = roomAreas.Current;
+                int ciX = (int)ci.x;
+                int ciY = (int)ci.y;
+                if(ciX == ciY)
+                    continue;
+
+                KeyValuePair<Vector2Int, Vector2Int> closestCells = new KeyValuePair<Vector2Int, Vector2Int>();
+                
+                foreach(Vector2Int cellA in rooms[ciX])
                 {
-                    /*
-                    if (room_a==room_b)
-					continue;
-				std::pair < Position, Position > closest_cells;
-				for (m=rooms[room_a].begin(),_m=rooms[room_a].end();m!=_m;++m)
-				{
-					// for each boder cell in room_a try each border cell of room_b
-					int x1 = (*m).x;
-					int y1 = (*m).y;
+                    foreach(Vector2Int cellB in rooms[ciY])
+                    {
+                        int distAB = (int)Vector2Int.Distance(cellA, cellB);
 
-					for (k=rooms[room_b].begin(),_k=rooms[room_b].end();k!=_k;++k)
-					{
-						int x2 = (*k).x;
-						int y2 = (*k).y;
-
-						int dist_ab = Distance(x1,y1,x2,y2);
-						
-						if (dist_ab<distance_matrix[room_a][room_b] || (dist_ab==distance_matrix[room_a][room_b] && CoinToss()))
-						{
-							closest_cells = std::make_pair( Position(x1,y1), Position(x2,y2) );
-							distance_matrix[room_a][room_b] = dist_ab;
-						}
-					}
-				}
-				closest_cells_matrix[room_a][room_b] = closest_cells;
-                    */
+                        if((distAB < distanceMatrix[ciX][ciY]) || (distAB == distanceMatrix[ciX][ciY] && GameRNG.CoinToss()))
+                        {
+                            closestCells = new KeyValuePair<Vector2Int, Vector2Int>(cellA, cellB);
+                            distanceMatrix[ciX][ciY] = distAB;
+                        }
+                    }
                 }
+
+                closestCellsMatrix[ciX][ciY] = closestCells;
             }
 
 
-            /*
-            
-		// Now connect the rooms to the closest ones
+            // Now connect the rooms to the closest ones
 
-		for (int room_a=0;room_a<(int) rooms.size();++room_a)
-		{
-			int min_distance=INT_MAX;
-			int closest_room;
-			for (int room_b=0;room_b<(int) rooms.size();++room_b)
-			{
-				if (room_a==room_b)
-					continue;
-				int distance = distance_matrix[room_a][room_b];
-				if (distance<min_distance)
-				{
-					min_distance = distance;
-					closest_room=room_b;
-				}
-			}
+            for(int roomA = 0; roomA < rooms.Count; ++roomA)
+            {
 
-			// connect room_a to closest one
-			std::pair < Position, Position > closest_cells;
-			closest_cells = closest_cells_matrix[room_a][closest_room];
+                int minDist = int.MaxValue;
+                int closestRoom = 0;
 
-			int x1=closest_cells.first.x;
-			int y1=closest_cells.first.y;
-			int x2=closest_cells.second.x;
-			int y2=closest_cells.second.y;
+                for(int roomB = 0; roomB < rooms.Count; ++roomB)
+                {
+                    if(roomA == roomB)
+                        continue;
 
-			if (room_connections[room_a][closest_room]==false && AddCorridor(level,x1,y1,x2,y2,straight_connections))
-			{
-				room_connections[room_a][closest_room]=true;
-				room_connections[closest_room][room_a]=true;
-			}
-		}
+                    int distance = distanceMatrix[roomA][roomB];
+                    if(distance < minDist)
+                    {
+                        minDist = distance;
+                        closestRoom = roomB;
+                    }
+                }
 
-		// The closest rooms connected. Connect the rest until all areas are connected
+                if(roomConnections[roomA][closestRoom] == true)
+                    continue;
 
+                // connect roomA to closest one
 
-		for(int to_connect_a=0;to_connect_a!=-1;)
-		{
-			size_t a,b,c;
-			int to_connect_b;
+                KeyValuePair<Vector2Int, Vector2Int> closestCells = closestCellsMatrix[roomA][closestRoom];
 
+                if(AddCorridor(map, valueMap, closestCells, straightConnections))
+                {
+                    roomConnections[roomA][closestRoom] = true;
+                    roomConnections[closestRoom][roomA] = true;
+                }
+            }
 
-			for (a=0;a<rooms.size();a++)
-				for (b=0;b<rooms.size();b++)
-					transitive_closure[a][b] = room_connections[a][b];
+            // The closest rooms connected. Connect the rest until all areas are connected
 
-			for (a=0;a<rooms.size();a++)
-			{
-				for (b=0;b<rooms.size();b++)
-				{
-					if (transitive_closure[a][b]==true && a!=b)
-					{
-						for (c=0;c<rooms.size();c++)
-						{
-							if (transitive_closure[b][c]==true)
-							{
-								transitive_closure[a][c]=true;
-								transitive_closure[c][a]=true;
-							}
-						}
-					}
-				}
-			}
+            for(int toConnectA = 0; toConnectA != -1;)
+            {
+                roomAreas = IterateOverArea(rooms.Count, rooms.Count);
 
-			// Check if all rooms are connected
-			to_connect_a=-1;
-			for (a=0;a<rooms.size() && to_connect_a==-1;++a)
-			{
-				for (b=0;b<rooms.size();b++)
-				{
-					if (a!=b && transitive_closure[a][b]==false)
-					{
-						to_connect_a=(int) a;
-						break;
-					}
-				}
-			}
+                while(roomAreas.MoveNext())
+                {
+                    Vector2Int ci = roomAreas.Current;
+                    transitiveClosure[ci.x][ci.y] = roomConnections[ci.x][ci.y];
+                }
 
-			if (to_connect_a!=-1)
-			{
-				// connect rooms a & b
-				do {
-					to_connect_b = Random((int) rooms.size());
-				} while(to_connect_b==to_connect_a);
-				std::pair < Position, Position > closest_cells;
-				closest_cells = closest_cells_matrix[to_connect_a][to_connect_b];
+                roomAreas = IterateOverArea(rooms.Count, rooms.Count);
 
-				int x1=closest_cells.first.x;
-				int y1=closest_cells.first.y;
-				int x2=closest_cells.second.x;
-				int y2=closest_cells.second.y;
+                while(roomAreas.MoveNext())
+                {
+                    Vector2Int ci = roomAreas.Current;
+                    if( transitiveClosure[ci.x][ci.y] == true && ci.x != ci.y)
+                    {
+                        for( int ciZ = 0; ciZ < rooms.Count; ++ciZ )
+                        {
+                            if(transitiveClosure[ci.y][ciZ] == true)
+                            {
+                                transitiveClosure[ci.x][ciZ] = true;
+                                transitiveClosure[ciZ][ci.x] = true;
+                            }
+                        }
+                    }
+                }
 
-				AddCorridor(level,x1,y1,x2,y2,straight_connections);
+                toConnectA = -1;
 
-				room_connections[to_connect_a][to_connect_b]=true;
-				room_connections[to_connect_b][to_connect_a]=true;
-			}
-		}
-            */
+                roomAreas = IterateOverArea(rooms.Count, rooms.Count);
+
+                while(roomAreas.MoveNext())
+                {
+                    Vector2Int ci = roomAreas.Current;
+                    if(transitiveClosure[ci.x][ci.y] == false && ci.x != ci.y)
+                    {
+                        toConnectA = ci.x;
+                        break;
+                    }
+                }
+
+                if(toConnectA != -1)
+                {
+                    int toConnectB = toConnectA;
+                    while(toConnectB == toConnectA)
+                    {
+                        toConnectB = GameRNG.Rand(rooms.Count);
+                    }
+
+                    KeyValuePair<Vector2Int, Vector2Int> closestCells = closestCellsMatrix[toConnectA][toConnectB];
+
+                    AddCorridor(map, valueMap, closestCells, straightConnections);
+                    {
+                        roomConnections[toConnectA][toConnectB] = true;
+                        roomConnections[toConnectB][toConnectA] = true;
+                    }
+                }
+            }
         }
+
+        protected bool AddCorridor(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, KeyValuePair<Vector2Int, Vector2Int> closestCells, bool straightConnections = false)
+        {
+            if(!map.IsValidPosition(closestCells.Key) || !map.IsValidPosition(closestCells.Value))
+                return false;
+
+            // we start from both sides 
+
+            Vector2Int p0 = closestCells.Key;
+            Vector2Int p1 = closestCells.Value;
+            Vector2Int dir = new Vector2Int(p1.x > p0.x ? 1 : -1, p1.y > p0.y ? 1 : -1);
+
+            bool firstHorizontal = GameRNG.CoinToss();
+            bool secondHorizontal = GameRNG.CoinToss();
+
+            for(;;)
+            {
+                if(!straightConnections)
+                {
+                    firstHorizontal = GameRNG.CoinToss();
+                    secondHorizontal = GameRNG.CoinToss();
+                }
+
+                // connect rooms
+
+                if(p0 != p1)
+                {
+                    if(secondHorizontal)
+                        p1.x -= dir.x;
+                    else
+                        p1.y -= dir.y;
+                }
+
+                if(valueMap[p0] == defaultWallElement.value)
+                    valueMap[p0] = defaultCorridorElement.value;
+                if(valueMap[p1] == defaultWallElement.value)
+                    valueMap[p1] = defaultCorridorElement.value;
+
+                // connect corridors if on the same level
+                if(p0.x == p1.x)
+                {
+                    while(p0.y != p1.y)
+                    {
+
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /*
+        
+	inline
+	bool AddCorridor(CMap &level, const int& start_x1, const int& start_y1, const int& start_x2, const int& start_y2, bool straight=false)
+	{	
+			// connect corridors if on the same level
+			if (x1==x2)
+			{
+				while(y1!=y2)
+				{
+					y1+=dir_y;
+					if (level.GetCell(x1,y1)==LevelElementWall_value)
+						level.SetCell(x1,y1,LevelElementCorridor_value);
+				}
+				if (level.GetCell(x1,y1)==LevelElementWall_value)
+					level.SetCell(x1,y1,LevelElementCorridor_value);
+				return true;
+			}
+			if (y1==y2)
+			{
+				while(x1!=x2)
+				{
+					x1+=dir_x;
+					if (level.GetCell(x1,y1)==LevelElementWall_value)
+						level.SetCell(x1,y1,LevelElementCorridor_value);
+				}
+				if (level.GetCell(x1,y1)==LevelElementWall_value)
+					level.SetCell(x1,y1,LevelElementCorridor_value);
+				return true;
+			}
+		}
+		return true;
+	}
+        */
 
         protected void ConvertValuesToTiles()
         {
@@ -391,96 +479,5 @@ namespace nv
         }
 
 
-        /*
-        
-	inline
-	bool AddCorridor(CMap &level, const int& start_x1, const int& start_y1, const int& start_x2, const int& start_y2, bool straight=false)
-	{	
-		if (!level.OnMap(start_x1,start_y1) || !level.OnMap(start_x2,start_y2))
-			return false;
-		// we start from both sides 
-		int x1,y1,x2,y2;
-
-		x1=start_x1;
-		y1=start_y1;
-		x2=start_x2;
-		y2=start_y2;
-
-		int dir_x;
-		int dir_y;
-
-		if (start_x2>start_x1)
-			dir_x=1;
-		else
-			dir_x=-1;
-
-		if (start_y2>start_y1)
-			dir_y=1;
-		else
-			dir_y=-1;
-
-
-		// move into direction of the other end
-		bool first_horizontal=CoinToss();
-		bool second_horizontal=CoinToss();
-
-		while(1)
-		{
-			if (!straight)
-			{
-				first_horizontal=CoinToss();
-				second_horizontal=CoinToss();
-			}
-
-			if (x1!=x2 && y1!=y2)
-			{
-				if (first_horizontal)
-					x1+=dir_x;
-				else
-					y1+=dir_y;
-			}
-			// connect rooms
-			if (x1!=x2 && y1!=y2)
-			{
-				if (second_horizontal)
-					x2-=dir_x;
-				else
-					y2-=dir_y;
-			}
-
-			if (level.GetCell(x1,y1)==LevelElementWall_value)
-				level.SetCell(x1,y1,LevelElementCorridor_value);
-			if (level.GetCell(x2,y2)==LevelElementWall_value)
-				level.SetCell(x2,y2,LevelElementCorridor_value);
-
-			// connect corridors if on the same level
-			if (x1==x2)
-			{
-				while(y1!=y2)
-				{
-					y1+=dir_y;
-					if (level.GetCell(x1,y1)==LevelElementWall_value)
-						level.SetCell(x1,y1,LevelElementCorridor_value);
-				}
-				if (level.GetCell(x1,y1)==LevelElementWall_value)
-					level.SetCell(x1,y1,LevelElementCorridor_value);
-				return true;
-			}
-			if (y1==y2)
-			{
-				while(x1!=x2)
-				{
-					x1+=dir_x;
-					if (level.GetCell(x1,y1)==LevelElementWall_value)
-						level.SetCell(x1,y1,LevelElementCorridor_value);
-				}
-				if (level.GetCell(x1,y1)==LevelElementWall_value)
-					level.SetCell(x1,y1,LevelElementCorridor_value);
-				return true;
-			}
-		}
-		return true;
-	}
-        */
     }
 }

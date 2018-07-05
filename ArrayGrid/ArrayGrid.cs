@@ -11,8 +11,8 @@ namespace nv
     {
         List<T> data;
 
-        float sizeX;
-        float sizeY;
+        int sizeX;
+        int sizeY;
 
         //Direct access, no bounds checking
         public T this[float i]
@@ -40,9 +40,9 @@ namespace nv
             }
         }
 
-        public Vector2 Size
+        public Vector2Int Size
         {
-            get { return new Vector2(sizeX, sizeY); }
+            get { return new Vector2Int(sizeX, sizeY); }
             set { sizeX = value.x; sizeY = value.y; }
         }
 
@@ -73,7 +73,7 @@ namespace nv
 
         public Rect Area
         {
-            get { return new Rect(Vector2.zero, Size); }
+            get { return new Rect(Vector2Int.zero, Size); }
         }
 
         public Rect ValidArea
@@ -97,7 +97,7 @@ namespace nv
 
             data.Clear();
             data.TrimExcess();
-            Size = Vector2.zero;
+            Size = Vector2Int.zero;
         }
 
         public bool DataIsValid()
@@ -127,12 +127,12 @@ namespace nv
                 data[i] = initialValue;
         }
 
-        public ArrayGrid(Vector2 size)
+        public ArrayGrid(Vector2Int size)
         {
             Resize((int)size.x, (int)size.y);
         }
 
-        public ArrayGrid(Vector2 size, T initialValue)
+        public ArrayGrid(Vector2Int size, T initialValue)
         {
             Resize((int)size.x, (int)size.y);
             for(int i = 0; i < data.Count; ++i)
@@ -169,7 +169,7 @@ namespace nv
         }
 
         //calls GetElement at each given position, will place null in the output list if a position is invalid
-        public List<T> GetElements(List<Vector2> positions)
+        public List<T> GetElements(List<Vector2Int> positions)
         {
             List<T> elements = new List<T>();
             for(int i = 0; i < positions.Count; ++i)
@@ -180,7 +180,7 @@ namespace nv
         }
 
         //Direct access, no bounds checking
-        public T this[Vector2 p]
+        public T this[Vector2Int p]
         {
             get
             {
@@ -205,13 +205,13 @@ namespace nv
             }
         }
 
-        public Vector2 GetPositionFromIndex(int i)
+        public Vector2Int GetPositionFromIndex(int i)
         {
-            return new Vector2((int)(i % w), (int)(i / w));
+            return new Vector2Int((int)(i % w), (int)(i / w));
         }
 
         //Safe access, with bounds checking
-        public T GetElement(Vector2 pos)
+        public T GetElement(Vector2Int pos)
         {
             return GetElement((int)(pos.x), (int)(pos.y));
         }
@@ -234,7 +234,7 @@ namespace nv
         }
 
         //Safe access, with bounds checking; Returns reference to the element (if valid)
-        public T SetElement(Vector2 pos, T element)
+        public T SetElement(Vector2Int pos, T element)
         {
             return SetElement((int)pos.x, (int)pos.y, element);
         }
@@ -281,7 +281,7 @@ namespace nv
         }
 
         //this will move an element to another position in the grid and null out the source
-        public bool MoveElement(Vector2 from, Vector2 to)
+        public bool MoveElement(Vector2Int from, Vector2Int to)
         {
             if(!IsValidPosition(from))
                 return false;
@@ -294,15 +294,15 @@ namespace nv
         }
 
         //this will move an element to another position by delta dx in the grid and null out the source
-        public bool MoveElementdx(Vector2 from, Vector2 dx)
+        public bool MoveElementdx(Vector2Int from, Vector2Int dx)
         {
-            Vector2 ddx = from + dx;
+            Vector2Int ddx = from + dx;
             return MoveElement(from, ddx);
         }
 
         //this will copy an element from one position to another position
         //note that if the type is a reference type both positions will reference the same object
-        public bool CopyElement(Vector2 from, Vector2 to)
+        public bool CopyElement(Vector2Int from, Vector2Int to)
         {
             if(!IsValidPosition(from))
                 return false;
@@ -315,32 +315,32 @@ namespace nv
 
         //this will move an element to another position by delta dx in the grid and null out the source
         //note that if the type is a reference type both positions will reference the same object
-        public bool CopyElementdx(Vector2 from, Vector2 dx)
+        public bool CopyElementdx(Vector2Int from, Vector2Int dx)
         {
-            Vector2 ddx = from + dx;
+            Vector2Int ddx = from + dx;
             return CopyElement(from, ddx);
         }
 
         //max valid (x,y)
-        public Vector2 MaxValidPosition
+        public Vector2Int MaxValidPosition
         {
             get
             {
-                Vector2 max = new Vector2(w - 1, h - 1);
-                max.x = Mathf.Max(max.x, 0.0f);
-                max.y = Mathf.Max(max.y, 0.0f);
+                Vector2Int max = new Vector2Int(w - 1, h - 1);
+                max.x = Mathf.Max(max.x, 0);
+                max.y = Mathf.Max(max.y, 0);
                 return max;
             }
         }
 
-        public bool IsValidPosition(Vector2 pos)
+        public bool IsValidPosition(Vector2Int pos)
         {
             return IsValidPosition((int)(pos.x), (int)(pos.y));
         }
 
         public bool IsValidPosition(int x, int y)
         {
-            return Mathnv.Contains(x, y, Vector2.zero, Size);
+            return Mathnv.Contains(x, y, Vector2Int.zero, Size);
         }
 
         //resize the layer. if possible, old data will be preserved
@@ -410,17 +410,17 @@ namespace nv
                 }
             }
 
-            Size = new Vector2(x, y);
+            Size = new Vector2Int(x, y);
         }
 
-        public void Resize(Vector2 new_size)
+        public void Resize(Vector2Int new_size)
         {
             Resize((int)new_size.x, (int)new_size.y);
         }
 
         public void Resize(Rect new_size)
         {
-            Resize(new_size.size);
+            Resize(new_size.size.ToInt());
         }
 
         static bool ValidRect(Rect r)
@@ -452,12 +452,12 @@ namespace nv
 
         class FloodFillData
         {
-            public List<Vector2> visitedCells = new List<Vector2>();
-            public List<Vector2> cellsToFill = new List<Vector2>();
+            public List<Vector2Int> visitedCells = new List<Vector2Int>();
+            public List<Vector2Int> cellsToFill = new List<Vector2Int>();
         }
 
         ///Helper for floodfill
-        static void FloodFillCheckAndAdd(ArrayGrid<T> layer, Vector2 pos, FloodFillData fill_data, List<T> boundry_mask)
+        static void FloodFillCheckAndAdd(ArrayGrid<T> layer, Vector2Int pos, FloodFillData fill_data, List<T> boundry_mask)
         {
             if(layer.IsValidPosition(pos)
                 && fill_data.visitedCells.Contains(pos) == false
@@ -469,7 +469,7 @@ namespace nv
             }
         }
 
-        static void FloodFillAdd(ArrayGrid<T> layer, Vector2 pos, FloodFillData fill_data)
+        static void FloodFillAdd(ArrayGrid<T> layer, Vector2Int pos, FloodFillData fill_data)
         {
             if(layer.IsValidPosition(pos)
                 && fill_data.visitedCells.Contains(pos) == false
@@ -479,7 +479,7 @@ namespace nv
             }
         }
 
-        static void FloodFillAddIfType(ArrayGrid<T> layer, Vector2 pos, FloodFillData fill_data, T type)
+        static void FloodFillAddIfType(ArrayGrid<T> layer, Vector2Int pos, FloodFillData fill_data, T type)
         {
             if(layer.IsValidPosition(pos)
                 && fill_data.visitedCells.Contains(pos) == false
@@ -490,7 +490,7 @@ namespace nv
             }
         }
 
-        static void FloodFillAddIfNotType(ArrayGrid<T> layer, Vector2 pos, FloodFillData fill_data, T type)
+        static void FloodFillAddIfNotType(ArrayGrid<T> layer, Vector2Int pos, FloodFillData fill_data, T type)
         {
             if(layer.IsValidPosition(pos)
                 && fill_data.visitedCells.Contains(pos) == false
@@ -501,7 +501,7 @@ namespace nv
             }
         }
 
-        static bool IsOnBoundry(Rect r, Vector2 p)
+        static bool IsOnBoundry(Rect r, Vector2Int p)
         {
             if(r.x == p.x)
                 return true;
@@ -516,10 +516,10 @@ namespace nv
 
         public bool IsPositionEmpty(int x, int y)
         {
-            return IsPositionEmpty(new Vector2(x, y));
+            return IsPositionEmpty(new Vector2Int(x, y));
         }
 
-        public bool IsPositionEmpty(Vector2 p)
+        public bool IsPositionEmpty(Vector2Int p)
         {
             if(!IsValidPosition(p))
                 return true;
@@ -553,9 +553,9 @@ namespace nv
         }
 
 
-        public List<Vector2> GetEmptyPositions()
+        public List<Vector2Int> GetEmptyPositions()
         {
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int i = 0; i < data.Count; ++i)
             {
@@ -568,9 +568,9 @@ namespace nv
             return positions;
         }
 
-        public List<Vector2> GetNonEmptyPositions()
+        public List<Vector2Int> GetNonEmptyPositions()
         {
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int i = 0; i < data.Count; ++i)
             {
@@ -583,9 +583,9 @@ namespace nv
             return positions;
         }
 
-        public List<Vector2> GetPositionsOfType(T type)
+        public List<Vector2Int> GetPositionsOfType(T type)
         {
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int i = 0; i < data.Count; ++i)
             {
@@ -598,9 +598,9 @@ namespace nv
             return positions;
         }
 
-        public List<Vector2> GetPositionsInMask(List<T> mask)
+        public List<Vector2Int> GetPositionsInMask(List<T> mask)
         {
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int i = 0; i < data.Count; ++i)
             {
@@ -613,9 +613,9 @@ namespace nv
             return positions;
         }
 
-        public List<Vector2> GetPositionsNotInMask(List<T> mask)
+        public List<Vector2Int> GetPositionsNotInMask(List<T> mask)
         {
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int i = 0; i < data.Count; ++i)
             {
@@ -652,14 +652,14 @@ namespace nv
             return elements;
         }
 
-        public List<Vector2> GetPositionsInArea(Rect area)
+        public List<Vector2Int> GetPositionsInArea(Rect area)
         {
             Mathnv.Clamp(ref area, Area);
 
             if(!ValidRect(area))
                 return null;
 
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int j = IterJStart(area); j < IterJEnd(area); ++j)
             {
@@ -668,7 +668,7 @@ namespace nv
                     if(!IsValidPosition(i, j))
                         continue;
 
-                    positions.Add(new Vector2(i, j));
+                    positions.Add(new Vector2Int(i, j));
                 }
             }
 
@@ -700,14 +700,14 @@ namespace nv
             return elements;
         }
 
-        public List<Vector2> GetPositionsInAreaOfType(Rect area, T type)
+        public List<Vector2Int> GetPositionsInAreaOfType(Rect area, T type)
         {
             Mathnv.Clamp(ref area, Area);
 
             if(!ValidRect(area))
                 return null;
 
-            List<Vector2> positions = new List<Vector2>();
+            List<Vector2Int> positions = new List<Vector2Int>();
 
             for(int j = IterJStart(area); j < IterJEnd(area); ++j)
             {
@@ -718,7 +718,7 @@ namespace nv
 
 
                     if(EqualityComparer<T>.Default.Equals(this[i, j], type))
-                        positions.Add(new Vector2(i, j));
+                        positions.Add(new Vector2Int(i, j));
                 }
             }
 
@@ -749,14 +749,14 @@ namespace nv
             return elements;
         }
 
-        public List<Vector2> GetPositionsInAreaInMask(Rect area, List<T> mask)
+        public List<Vector2Int> GetPositionsInAreaInMask(Rect area, List<T> mask)
         {
             Mathnv.Clamp(ref area, Area);
 
             if(!ValidRect(area))
                 return null;
 
-            List<Vector2> elements = new List<Vector2>();
+            List<Vector2Int> elements = new List<Vector2Int>();
 
             for(int j = IterJStart(area); j < IterJEnd(area); ++j)
             {
@@ -766,7 +766,7 @@ namespace nv
                         continue;
 
                     if(mask.Contains(this[i, j]))
-                        elements.Add(new Vector2(i, j));
+                        elements.Add(new Vector2Int(i, j));
                 }
             }
 
@@ -797,14 +797,14 @@ namespace nv
             return elements;
         }
 
-        public List<Vector2> GetPositionsInAreaNotInMask(Rect area, List<T> mask)
+        public List<Vector2Int> GetPositionsInAreaNotInMask(Rect area, List<T> mask)
         {
             Mathnv.Clamp(ref area, Area);
 
             if(!ValidRect(area))
                 return null;
 
-            List<Vector2> elements = new List<Vector2>();
+            List<Vector2Int> elements = new List<Vector2Int>();
 
             for(int j = IterJStart(area); j < IterJEnd(area); ++j)
             {
@@ -814,14 +814,14 @@ namespace nv
                         continue;
 
                     if(!mask.Contains(this[i, j]))
-                        elements.Add(new Vector2(i, j));
+                        elements.Add(new Vector2Int(i, j));
                 }
             }
 
             return elements;
         }
 
-        public List<T> GetElementsInFloodFill(Vector2 start_point, List<T> boundry_mask, bool search_diagonal)
+        public List<T> GetElementsInFloodFill(Vector2Int start_point, List<T> boundry_mask, bool search_diagonal)
         {
             if(!IsValidPosition(start_point))
                 return null;
@@ -839,12 +839,12 @@ namespace nv
             //fill until we run out
             while(ffdata.cellsToFill.Count > 0)
             {
-                Vector2 p = ffdata.cellsToFill[0];
+                Vector2Int p = ffdata.cellsToFill[0];
 
-                Vector2 left = new Vector2(p.x - 1, p.y);
-                Vector2 right = new Vector2(p.x + 1, p.y);
-                Vector2 up = new Vector2(p.x, p.y - 1);
-                Vector2 down = new Vector2(p.x, p.y + 1);
+                Vector2Int left = new Vector2Int(p.x - 1, p.y);
+                Vector2Int right = new Vector2Int(p.x + 1, p.y);
+                Vector2Int up = new Vector2Int(p.x, p.y - 1);
+                Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
                 FloodFillCheckAndAdd(this, left, ffdata, boundry_mask);
                 FloodFillCheckAndAdd(this, right, ffdata, boundry_mask);
@@ -853,10 +853,10 @@ namespace nv
 
                 if(search_diagonal)
                 {
-                    Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                    Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                    Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                    Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                    Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                    Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                    Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                    Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                     FloodFillCheckAndAdd(this, tl, ffdata, boundry_mask);
                     FloodFillCheckAndAdd(this, tr, ffdata, boundry_mask);
@@ -874,7 +874,7 @@ namespace nv
         }
 
 
-        public List<Vector2> GetPositionsInFloodFill(Vector2 start_point, List<T> boundry_mask, bool search_diagonal)
+        public List<Vector2Int> GetPositionsInFloodFill(Vector2Int start_point, List<T> boundry_mask, bool search_diagonal)
         {
             if(!IsValidPosition(start_point))
                 return null;
@@ -887,17 +887,17 @@ namespace nv
 
             ffdata.cellsToFill.Add(start_point);
 
-            List<Vector2> elements = new List<Vector2>();
+            List<Vector2Int> elements = new List<Vector2Int>();
 
             //fill until we run out
             while(ffdata.cellsToFill.Count > 0)
             {
-                Vector2 p = ffdata.cellsToFill[0];
+                Vector2Int p = ffdata.cellsToFill[0];
 
-                Vector2 left = new Vector2(p.x - 1, p.y);
-                Vector2 right = new Vector2(p.x + 1, p.y);
-                Vector2 up = new Vector2(p.x, p.y - 1);
-                Vector2 down = new Vector2(p.x, p.y + 1);
+                Vector2Int left = new Vector2Int(p.x - 1, p.y);
+                Vector2Int right = new Vector2Int(p.x + 1, p.y);
+                Vector2Int up = new Vector2Int(p.x, p.y - 1);
+                Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
                 FloodFillCheckAndAdd(this, left, ffdata, boundry_mask);
                 FloodFillCheckAndAdd(this, right, ffdata, boundry_mask);
@@ -906,10 +906,10 @@ namespace nv
 
                 if(search_diagonal)
                 {
-                    Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                    Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                    Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                    Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                    Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                    Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                    Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                    Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                     FloodFillCheckAndAdd(this, tl, ffdata, boundry_mask);
                     FloodFillCheckAndAdd(this, tr, ffdata, boundry_mask);
@@ -926,7 +926,7 @@ namespace nv
             return elements;
         }
 
-        public void FloodFill(Vector2 start_point, List<T> boundry_mask, bool search_diagonal, T fill_value)
+        public void FloodFill(Vector2Int start_point, List<T> boundry_mask, bool search_diagonal, T fill_value)
         {
             if(!IsValidPosition(start_point))
                 return;
@@ -942,12 +942,12 @@ namespace nv
             //fill until we run out
             while(ffdata.cellsToFill.Count > 0)
             {
-                Vector2 p = ffdata.cellsToFill[0];
+                Vector2Int p = ffdata.cellsToFill[0];
 
-                Vector2 left = new Vector2(p.x - 1, p.y);
-                Vector2 right = new Vector2(p.x + 1, p.y);
-                Vector2 up = new Vector2(p.x, p.y - 1);
-                Vector2 down = new Vector2(p.x, p.y + 1);
+                Vector2Int left = new Vector2Int(p.x - 1, p.y);
+                Vector2Int right = new Vector2Int(p.x + 1, p.y);
+                Vector2Int up = new Vector2Int(p.x, p.y - 1);
+                Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
                 FloodFillCheckAndAdd(this, left, ffdata, boundry_mask);
                 FloodFillCheckAndAdd(this, right, ffdata, boundry_mask);
@@ -956,10 +956,10 @@ namespace nv
 
                 if(search_diagonal)
                 {
-                    Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                    Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                    Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                    Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                    Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                    Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                    Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                    Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                     FloodFillCheckAndAdd(this, tl, ffdata, boundry_mask);
                     FloodFillCheckAndAdd(this, tr, ffdata, boundry_mask);
@@ -985,7 +985,7 @@ namespace nv
             {
                 for(int i = IterIStart(area); i < IterIEnd(area); ++i)
                 {
-                    Vector2 p = new Vector2(i, j);
+                    Vector2Int p = new Vector2Int(i, j);
 
                     if(!IsValidPosition(p))
                         continue;
@@ -1006,7 +1006,7 @@ namespace nv
             {
                 for(int i = IterIStart(area); i <= IterIEnd(area); ++i)
                 {
-                    Vector2 p = new Vector2(i, j);
+                    Vector2Int p = new Vector2Int(i, j);
                     if(j == IterJStart(area))
                     {
                         SetElement(p, fill_value);
@@ -1052,7 +1052,7 @@ namespace nv
             {
                 for(int i = IterIStart(area); i < IterIEnd(area); ++i)
                 {
-                    Vector2 p = new Vector2(i, j);
+                    Vector2Int p = new Vector2Int(i, j);
                     if(!IsValidPosition(p))
                         continue;
 
@@ -1073,7 +1073,7 @@ namespace nv
             {
                 for(int i = IterIStart(area); i < IterIEnd(area); ++i)
                 {
-                    Vector2 p = new Vector2(i, j);
+                    Vector2Int p = new Vector2Int(i, j);
                     if(!IsValidPosition(p))
                         continue;
 
@@ -1094,7 +1094,7 @@ namespace nv
             {
                 for(int i = IterIStart(area); i < IterIEnd(area); ++i)
                 {
-                    Vector2 p = new Vector2(i, j);
+                    Vector2Int p = new Vector2Int(i, j);
                     if(!IsValidPosition(p))
                         continue;
 
@@ -1118,7 +1118,7 @@ namespace nv
             {
                 for(int i = IterIStart(area); i < IterIEnd(area); ++i)
                 {
-                    Vector2 p = new Vector2(i, j);
+                    Vector2Int p = new Vector2Int(i, j);
                     if(!IsValidPosition(p))
                         continue;
 
@@ -1133,13 +1133,13 @@ namespace nv
 
         public T GetRandomElement()
         {
-            Vector2 p = GameRNG.Rand(ValidArea);
+            Vector2Int p = Vector2Int.FloorToInt(GameRNG.Rand(ValidArea));
             return this[p];
         }
 
-        public Vector2 GetRandomPosition()
+        public Vector2Int GetRandomPosition()
         {
-            Vector2 p = GameRNG.Rand(ValidArea);
+            Vector2Int p = Vector2Int.FloorToInt(GameRNG.Rand(ValidArea));
             return p;
         }
 
@@ -1155,9 +1155,9 @@ namespace nv
             return elements[i];
         }
 
-        public Vector2? GetRandomNonEmptyPosition()
+        public Vector2Int? GetRandomNonEmptyPosition()
         {
-            List<Vector2> elements = GetNonEmptyPositions();
+            List<Vector2Int> elements = GetNonEmptyPositions();
 
             if(elements.Count <= 0)
                 return null;
@@ -1181,9 +1181,9 @@ namespace nv
         }
 
         //Warning: Expensive call
-        public Vector2? GetRandomEmptyPosition()
+        public Vector2Int? GetRandomEmptyPosition()
         {
-            List<Vector2> elements = GetEmptyPositions();
+            List<Vector2Int> elements = GetEmptyPositions();
 
             if(elements.Count <= 0)
                 return null;
@@ -1205,9 +1205,9 @@ namespace nv
             return elements[i];
         }
 
-        public Vector2? GetRandomPositionOfType(T type)
+        public Vector2Int? GetRandomPositionOfType(T type)
         {
-            List<Vector2> elements = GetPositionsOfType(type);
+            List<Vector2Int> elements = GetPositionsOfType(type);
 
             if(elements.Count <= 0)
                 return null;
@@ -1221,16 +1221,16 @@ namespace nv
         {
             Mathnv.Clamp(ref area, ValidArea);
 
-            Vector2 p = GameRNG.Rand(area);
+            Vector2Int p = Vector2Int.FloorToInt(GameRNG.Rand(area));
 
             return this[p];
         }
 
-        public Vector2? GetRandomPositionInArea(Rect area)
+        public Vector2Int? GetRandomPositionInArea(Rect area)
         {
             Mathnv.Clamp(ref area, ValidArea);
             
-            Vector2 p = GameRNG.Rand(area);
+            Vector2Int p = Vector2Int.FloorToInt(GameRNG.Rand(area));
 
             return p;
         }
@@ -1249,11 +1249,11 @@ namespace nv
             return elements[i];
         }
 
-        public Vector2? GetRandomPositionInAreaOfType(Rect area, T type)
+        public Vector2Int? GetRandomPositionInAreaOfType(Rect area, T type)
         {
             Mathnv.Clamp(ref area, Area);
 
-            List<Vector2> elements = GetPositionsInAreaOfType(area, type);
+            List<Vector2Int> elements = GetPositionsInAreaOfType(area, type);
 
             if(elements.Count <= 0)
                 return null;
@@ -1277,11 +1277,11 @@ namespace nv
             return elements[i];
         }
 
-        public Vector2? GetRandomPositionInAreaInMask(Rect area, List<T> mask)
+        public Vector2Int? GetRandomPositionInAreaInMask(Rect area, List<T> mask)
         {
             Mathnv.Clamp(ref area, Area);
 
-            List<Vector2> elements = GetPositionsInAreaInMask(area, mask);
+            List<Vector2Int> elements = GetPositionsInAreaInMask(area, mask);
 
             if(elements.Count <= 0)
                 return null;
@@ -1305,11 +1305,11 @@ namespace nv
             return elements[i];
         }
 
-        public Vector2? GetRandomPositionInAreaNotInMask(Rect area, List<T> mask)
+        public Vector2Int? GetRandomPositionInAreaNotInMask(Rect area, List<T> mask)
         {
             Mathnv.Clamp(ref area, Area);
 
-            List<Vector2> elements = GetPositionsInAreaNotInMask(area, mask);
+            List<Vector2Int> elements = GetPositionsInAreaNotInMask(area, mask);
 
             if(elements.Count <= 0)
                 return null;
@@ -1319,18 +1319,18 @@ namespace nv
             return elements[i];
         }
 
-        public Rect GetRandomArea(Vector2 size)
+        public Rect GetRandomArea(Vector2Int size)
         {
-            Rect area = new Rect(Vector2.zero, Size);
+            Rect area = new Rect(Vector2Int.zero, Size);
 
             if(size.x > w)
                 return area;
             if(size.y > h)
                 return area;
 
-            area = new Rect(Vector2.zero, size);
+            area = new Rect(Vector2Int.zero, size);
 
-            Vector2 p = GameRNG.Rand(ValidArea);
+            Vector2Int p = Vector2Int.FloorToInt(GameRNG.Rand(ValidArea));
 
             if(p.x + size.x > w)
             {
@@ -1347,19 +1347,19 @@ namespace nv
             return area;
         }
 
-        public List<T> GetAdjacentElements(Vector2 pos, bool search_diagonal)
+        public List<T> GetAdjacentElements(Vector2Int pos, bool search_diagonal)
         {
             if(!IsValidPosition(pos))
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAdd(this, left, ffdata);
             FloodFillAdd(this, right, ffdata);
@@ -1368,10 +1368,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAdd(this, tl, ffdata);
                 FloodFillAdd(this, tr, ffdata);
@@ -1383,19 +1383,19 @@ namespace nv
         }
 
 
-        public List<Vector2> GetAdjacentPositions(Vector2 pos, bool search_diagonal)
+        public List<Vector2Int> GetAdjacentPositions(Vector2Int pos, bool search_diagonal)
         {
             if(!IsValidPosition(pos))
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAdd(this, left, ffdata);
             FloodFillAdd(this, right, ffdata);
@@ -1404,10 +1404,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAdd(this, tl, ffdata);
                 FloodFillAdd(this, tr, ffdata);
@@ -1418,19 +1418,19 @@ namespace nv
             return ffdata.cellsToFill;
         }
 
-        public List<T> GetAdjacentElementsOfType(Vector2 pos, bool search_diagonal, T type)
+        public List<T> GetAdjacentElementsOfType(Vector2Int pos, bool search_diagonal, T type)
         {
             if(!IsValidPosition(pos))
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
                         
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAddIfType(this, left, ffdata, type);
             FloodFillAddIfType(this, right, ffdata, type);
@@ -1439,10 +1439,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAddIfType(this, tl, ffdata, type);
                 FloodFillAddIfType(this, tr, ffdata, type);
@@ -1454,19 +1454,19 @@ namespace nv
         }
 
 
-        public List<Vector2> GetAdjacentPositionsOfType(Vector2 pos, bool search_diagonal, T type)
+        public List<Vector2Int> GetAdjacentPositionsOfType(Vector2Int pos, bool search_diagonal, T type)
         {
             if(!IsValidPosition(pos))
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAddIfType(this, left, ffdata, type);
             FloodFillAddIfType(this, right, ffdata, type);
@@ -1475,10 +1475,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAddIfType(this, tl, ffdata, type);
                 FloodFillAddIfType(this, tr, ffdata, type);
@@ -1489,19 +1489,19 @@ namespace nv
             return ffdata.cellsToFill;
         }
 
-        public List<T> GetAdjacentElementsNotOfType(Vector2 pos, bool search_diagonal, T type)
+        public List<T> GetAdjacentElementsNotOfType(Vector2Int pos, bool search_diagonal, T type)
         {
             if(!IsValidPosition(pos))
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAddIfNotType(this, left, ffdata, type);
             FloodFillAddIfNotType(this, right, ffdata, type);
@@ -1510,10 +1510,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAddIfNotType(this, tl, ffdata, type);
                 FloodFillAddIfNotType(this, tr, ffdata, type);
@@ -1525,19 +1525,19 @@ namespace nv
         }
 
 
-        public List<Vector2> GetAdjacentPositionsNotOfType(Vector2 pos, bool search_diagonal, T type)
+        public List<Vector2Int> GetAdjacentPositionsNotOfType(Vector2Int pos, bool search_diagonal, T type)
         {
             if(!IsValidPosition(pos))
                 return null;
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAddIfNotType(this, left, ffdata, type);
             FloodFillAddIfNotType(this, right, ffdata, type);
@@ -1546,10 +1546,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAddIfNotType(this, tl, ffdata, type);
                 FloodFillAddIfNotType(this, tr, ffdata, type);
@@ -1560,17 +1560,17 @@ namespace nv
             return ffdata.cellsToFill;
         }
 
-        public List<T> GetAdjacentEmptyElements(Vector2 pos, bool search_diagonal)
+        public List<T> GetAdjacentEmptyElements(Vector2Int pos, bool search_diagonal)
         {
             return GetAdjacentElementsOfType(pos, search_diagonal, default(T));
         }
 
-        public List<Vector2> GetAdjacentEmptyPositions(Vector2 pos, bool search_diagonal)
+        public List<Vector2Int> GetAdjacentEmptyPositions(Vector2Int pos, bool search_diagonal)
         {
             return GetAdjacentPositionsOfType(pos, search_diagonal, default(T));
         }
 
-        public List<T> GetAdjacentNonEmptyElements(Vector2 pos, bool search_diagonal)
+        public List<T> GetAdjacentNonEmptyElements(Vector2Int pos, bool search_diagonal)
         {
             if(!IsValidPosition(pos))
                 return null;
@@ -1579,12 +1579,12 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAddIfNotType(this, left, ffdata, type);
             FloodFillAddIfNotType(this, right, ffdata, type);
@@ -1593,10 +1593,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAddIfNotType(this, tl, ffdata, type);
                 FloodFillAddIfNotType(this, tr, ffdata, type);
@@ -1607,7 +1607,7 @@ namespace nv
             return GetElements(ffdata.cellsToFill);
         }
 
-        public List<Vector2> GetAdjacentNonEmptyPositions(Vector2 pos, bool search_diagonal)
+        public List<Vector2Int> GetAdjacentNonEmptyPositions(Vector2Int pos, bool search_diagonal)
         {
             if(!IsValidPosition(pos))
                 return null;
@@ -1616,12 +1616,12 @@ namespace nv
 
             FloodFillData ffdata = new FloodFillData();
 
-            Vector2 p = pos;
+            Vector2Int p = pos;
 
-            Vector2 left = new Vector2(p.x - 1, p.y);
-            Vector2 right = new Vector2(p.x + 1, p.y);
-            Vector2 up = new Vector2(p.x, p.y - 1);
-            Vector2 down = new Vector2(p.x, p.y + 1);
+            Vector2Int left = new Vector2Int(p.x - 1, p.y);
+            Vector2Int right = new Vector2Int(p.x + 1, p.y);
+            Vector2Int up = new Vector2Int(p.x, p.y - 1);
+            Vector2Int down = new Vector2Int(p.x, p.y + 1);
 
             FloodFillAddIfNotType(this, left, ffdata, type);
             FloodFillAddIfNotType(this, right, ffdata, type);
@@ -1630,10 +1630,10 @@ namespace nv
 
             if(search_diagonal)
             {
-                Vector2 tl = new Vector2(p.x - 1, p.y - 1);
-                Vector2 tr = new Vector2(p.x + 1, p.y - 1);
-                Vector2 bl = new Vector2(p.x - 1, p.y + 1);
-                Vector2 br = new Vector2(p.x + 1, p.y + 1);
+                Vector2Int tl = new Vector2Int(p.x - 1, p.y - 1);
+                Vector2Int tr = new Vector2Int(p.x + 1, p.y - 1);
+                Vector2Int bl = new Vector2Int(p.x - 1, p.y + 1);
+                Vector2Int br = new Vector2Int(p.x + 1, p.y + 1);
 
                 FloodFillAddIfNotType(this, tl, ffdata, type);
                 FloodFillAddIfNotType(this, tr, ffdata, type);
@@ -1644,7 +1644,7 @@ namespace nv
             return ffdata.cellsToFill;
         }
 
-        public void SetElements(List<Vector2> positions, List<T> elements)
+        public void SetElements(List<Vector2Int> positions, List<T> elements)
         {
             if(elements == null)
                 return;
@@ -1660,7 +1660,7 @@ namespace nv
             }
         }
 
-        public void SetElements(List<Vector2> positions, T element)
+        public void SetElements(List<Vector2Int> positions, T element)
         {
             if(element == null)
                 return;
@@ -1685,9 +1685,9 @@ namespace nv
             }
         }
                 
-        public List<Vector2> GetPositionsOfAreasOfType(T type, Vector2 desiredSize)
+        public List<Vector2Int> GetPositionsOfAreasOfType(T type, Vector2Int desiredSize)
         {
-            List<Vector2> areas = new List<Vector2>();
+            List<Vector2Int> areas = new List<Vector2Int>();
             ArrayGrid <int> goodPoints = new ArrayGrid<int>(Size, 0);
 
             for(int j = IterJStart(Area); j < IterJEnd(Area); ++j)
@@ -1734,7 +1734,7 @@ namespace nv
 
                     if(verticalCount == (int)desiredSize.y)
                     {
-                        areas.Add(new Vector2(i, 1 + j - (int)desiredSize.y));
+                        areas.Add(new Vector2Int(i, 1 + j - (int)desiredSize.y));
                         verticalCount--;
                     }
                 }
@@ -1743,9 +1743,9 @@ namespace nv
             return areas;
         }
 
-        public bool GetPositionOfRandomAreaOfType(T type, Vector2 desiredSize, ref Vector2 position)
+        public bool GetPositionOfRandomAreaOfType(T type, Vector2Int desiredSize, ref Vector2Int position)
         {
-            List<Vector2> areas = GetPositionsOfAreasOfType(type, desiredSize);
+            List<Vector2Int> areas = GetPositionsOfAreasOfType(type, desiredSize);
             if(areas.Count <= 0)
                 return false;
 

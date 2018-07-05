@@ -53,8 +53,8 @@ namespace nv.Tests
         {
             float size = 100f;
             var mapRect = new Rect(-size / 2f, -size / 2f, size, size);
-            var map = new ArrayGrid<int>(mapRect.size);
-            var start = new Vector2(0f, 0f);
+            var map = new ArrayGrid<int>(mapRect.size.ToInt());
+            var start = new Vector2Int(0, 0);
             var end = map.MaxValidPosition;
             bool searchDiagonal = true;
             bool debug = false;
@@ -71,8 +71,8 @@ namespace nv.Tests
         {
             float size = 1000f;
             var mapRect = new Rect(-size / 2f, -size / 2f, size, size);
-            var map = new ArrayGrid<int>(mapRect.size);
-            var start = new Vector2(0f, 0f);
+            var map = new ArrayGrid<int>(mapRect.size.ToInt());
+            var start = new Vector2Int(0, 0);
             var end = map.MaxValidPosition;
             bool searchDiagonal = true;
             bool debug = false;
@@ -89,8 +89,8 @@ namespace nv.Tests
         {
             float size = 1000f;
             var mapRect = new Rect(-size / 2f, -size / 2f, size, size);
-            var map = new ArrayGrid<int>(mapRect.size);
-            var start = new Vector2(0f, 0f);
+            var map = new ArrayGrid<int>(mapRect.size.ToInt());
+            var start = new Vector2Int(0, 0);
             var end = map.MaxValidPosition;
             bool searchDiagonal = true;
             bool debug = false;

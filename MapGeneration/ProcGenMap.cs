@@ -7,7 +7,7 @@ namespace nv
 {
     public abstract class ProcGenMap : ScriptableObject
     {
-        public Vector2 mapSize = new Vector2(100, 100);
+        public Vector2Int mapSize = new Vector2Int(100, 100);
 
         [EditScriptable]
         public MapElement defaultFillElement;

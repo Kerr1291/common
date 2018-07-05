@@ -263,13 +263,22 @@ namespace nv
             x = Mathf.Clamp(x, Min, Max);
             return (x - Min) / Size;
         }
+        public int RandomValuei()
+        {
+            return GameRNG.Rand((int)Min, (int)Max);
+        }
 
-        public float RandomValue()
+        public int RandomValuei(RNG rng)
+        {
+            return rng.Rand((int)Min, (int)Max);
+        }
+
+        public float RandomValuef()
         {
             return GameRNG.Rand(Min, Max);
         }
 
-        public float RandomValue(RNG rng)
+        public float RandomValuef(RNG rng)
         {
             return rng.Rand(Min, Max);
         }

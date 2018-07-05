@@ -17,11 +17,11 @@ public class MapScene : MonoBehaviour {
     public LayerMask debugLayerMask;
 
     Rect bounds;
-    Vector2 mapPos
+    Vector2Int mapPos
     {
         get
         {
-            return bounds.position;
+            return bounds.position.ToInt();
         }
     }
 
@@ -61,12 +61,12 @@ public class MapScene : MonoBehaviour {
         return 0;
     }
 
-    Vector2 MapToWorldPosition(Vector2 mapPos)
+    Vector2 MapToWorldPosition(Vector2Int mapPos)
     {
-        return bounds.position + (mapPos * cellSize);
+        return bounds.position + (new Vector2(mapPos.x, mapPos.y) * cellSize);
     }
 
-    Vector2 WorldToMapPosition(Vector2 worldPos)
+    Vector2Int WorldToMapPosition(Vector2 worldPos)
     {
         Vector2 local = worldPos / cellSize - bounds.position;
         return local.ToInt();
@@ -81,7 +81,7 @@ public class MapScene : MonoBehaviour {
             float size = 100f;
             mapRect = new Rect(-size / 2f, -size / 2f, size, size);
 
-            List<Vector2> startPositions = new List<Vector2>() { new Vector2(10, 0), new Vector2(50, 98) };
+            List<Vector2Int> startPositions = new List<Vector2Int>() { new Vector2Int(10, 0), new Vector2Int(50, 98) };
 
             yield return Setup(mapRect, startPositions);
             yield return Map();
@@ -89,7 +89,7 @@ public class MapScene : MonoBehaviour {
             //path finding code
             //if(false)
             {
-                List<Vector2> path = new List<Vector2>();
+                List<Vector2Int> path = new List<Vector2Int>();
                 //FindAPath<int> pathFinder = new FindAPath<int>();
 
                 //Node start = new Node(startPositions[0], (int)startPositions[0].x, (int)startPositions[0].y, 1f);
@@ -137,10 +137,10 @@ public class MapScene : MonoBehaviour {
         yield break;
 	}
 
-    IEnumerator Setup(Rect mapBounds, List<Vector2> startPositions)
+    IEnumerator Setup(Rect mapBounds, List<Vector2Int> startPositions)
     {
         bounds = mapBounds;
-        map = new ArrayGrid<int>(mapBounds.size);
+        map = new ArrayGrid<int>(mapBounds.size.ToInt());
 
         LayerMask wallMask = new LayerMask();
         wallMask.value = 8; //TODO: update this with the correct value for walls
@@ -164,16 +164,16 @@ public class MapScene : MonoBehaviour {
                     yield return new WaitForEndOfFrame();
                 }
 
-                Vector2 localFrom = new Vector2(i, j);
+                Vector2Int localFrom = new Vector2Int(i, j);
                 Vector2 from = MapToWorldPosition(localFrom);
 
-                List<Vector2> nearby = map.GetAdjacentPositions(localFrom, false);
+                List<Vector2Int> nearby = map.GetAdjacentPositions(localFrom, false);
 
                 //if(nearby == null)
                 //    continue;
                 bool isInWall = true;
 
-                foreach(Vector2 v in nearby)
+                foreach(Vector2Int v in nearby)
                 {
                     Vector2 worldV = MapToWorldPosition(v);
 

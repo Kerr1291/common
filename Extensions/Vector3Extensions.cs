@@ -87,12 +87,9 @@ namespace nv
             return t;
         }
 
-        public static Vector3 ToInt( this Vector3 v )
+        public static Vector3Int ToInt( this Vector3 v )
         {
-            v.x = (int)( v.x );
-            v.y = (int)( v.y );
-            v.z = (int)( v.z );
-            return v;
+            return Vector3Int.FloorToInt(v);
         }
     }
 }

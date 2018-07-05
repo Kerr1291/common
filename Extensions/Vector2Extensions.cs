@@ -59,11 +59,9 @@ namespace nv
             return v;
         }
 
-        public static Vector2 ToInt( this Vector2 v )
+        public static Vector2Int ToInt( this Vector2 v )
         {
-            v.x = (int)( v.x );
-            v.y = (int)( v.y );
-            return v;
+            return Vector2Int.FloorToInt(v);
         }
 
         public static Vector3 VectorXZ( this Vector2 v )

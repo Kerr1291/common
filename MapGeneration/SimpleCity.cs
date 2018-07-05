@@ -80,7 +80,7 @@ namespace nv
 
         private void GenerateRoads(ArrayGrid<MapElement> map, Rect main)
         {
-            AddRecursiveRooms(map, defaultCorridorElement, new Vector2(buildingSizeLimitX.Max, buildingSizeLimitY.Max), main, false);
+            AddRecursiveRooms(map, defaultCorridorElement, new Vector2Int((int)buildingSizeLimitX.Max, (int)buildingSizeLimitY.Max), main, false);
         }
 
         private void GenerateTrees(ArrayGrid<MapElement> map)
@@ -91,7 +91,7 @@ namespace nv
             int abort = 0;
             for(int i = 0; i < spacesToFill; ++i)
             {
-                Vector2 spotToFill = openGroundSpaces.GetRandomElementFromList();
+                Vector2Int spotToFill = openGroundSpaces.GetRandomElementFromList();
                 //Debug.Log("trying to put tree at " + spotToFill);
                 var nearby = map.GetAdjacentElementsOfType(spotToFill, true, defaultBuildingWallElement);
 
@@ -117,13 +117,13 @@ namespace nv
         {
             while(buildingCount < requiredMinNumberOfBuildings)
             {
-                Vector2 roomSize = new Vector2((buildingSizeLimitX.Max * 2f), (buildingSizeLimitY.Max * 2f));
+                Vector2Int roomSize = new Vector2Int((int)(buildingSizeLimitX.Max * 2), (int)(buildingSizeLimitY.Max * 2));
                 int bufferSize = 2;
 
                 for(;;)
                 {
-                    Vector2 newBuildingAreaSize = new Vector2(roomSize.x + bufferSize, roomSize.y + bufferSize);
-                    Vector2 buildingPos = Vector2.zero;
+                    Vector2Int newBuildingAreaSize = new Vector2Int(roomSize.x + bufferSize, roomSize.y + bufferSize);
+                    Vector2Int buildingPos = Vector2Int.zero;
                     bool result = map.GetPositionOfRandomAreaOfType(defaultFillElement, newBuildingAreaSize, ref buildingPos);
                     if(result)
                     {
@@ -139,11 +139,11 @@ namespace nv
                     {
                         if(GameRNG.CoinToss())
                         {
-                            roomSize.x -= 1f;
+                            roomSize.x -= 1;
                         }
                         else
                         {
-                            roomSize.y -= 1f;
+                            roomSize.y -= 1;
                         }
 
                         //time to start over
@@ -161,7 +161,7 @@ namespace nv
             return false;
         }
 
-        void GenerateBuildingRooms(ArrayGrid<MapElement> map, Vector2 buildingPos, Vector2 roomSize)
+        void GenerateBuildingRooms(ArrayGrid<MapElement> map, Vector2Int buildingPos, Vector2Int roomSize)
         {
             Rect building = new Rect();
             Rect smaller = new Rect();
@@ -174,13 +174,13 @@ namespace nv
 
             smaller = building;
 
-            smaller.min = smaller.min + Vector2.one;
-            smaller.max = smaller.max - Vector2.one;
+            smaller.min = smaller.min + Vector2Int.one;
+            smaller.max = smaller.max - Vector2Int.one;
 
             map.FillArea(building, defaultBuildingWallElement);
             map.FillArea(smaller, defaultRoomElement);
 
-            AddRecursiveRooms(map, defaultBuildingWallElement, new Vector2(innerBuildingRoomSize, innerBuildingRoomSize), smaller);
+            AddRecursiveRooms(map, defaultBuildingWallElement, new Vector2Int(innerBuildingRoomSize, innerBuildingRoomSize), smaller);
 
             // add a door leading out (improve to lead to nearest road)
             if(GameRNG.CoinToss())
@@ -219,7 +219,7 @@ namespace nv
             }
         }
 
-        void AddRecursiveRooms(ArrayGrid<MapElement> map, MapElement roomElement, Vector2 minRoomSize, Rect room, bool withDoors = true)
+        void AddRecursiveRooms(ArrayGrid<MapElement> map, MapElement roomElement, Vector2Int minRoomSize, Rect room, bool withDoors = true)
         {
             int sizeX = (int)room.size.x;
             if(sizeX % 2 != 0)
@@ -264,14 +264,14 @@ namespace nv
                 }
 
                 Rect newRoom = room;
-                Vector2 newMax = newRoom.max;
-                newMax.y = room.min.y + split;
+                Vector2Int newMax = newRoom.max.ToInt();
+                newMax.y = room.min.ToInt().y + split;
                 newRoom.max = newMax;
                 AddRecursiveRooms(map, roomElement, minRoomSize, newRoom, withDoors);
 
                 newRoom = room;
-                Vector2 newMin = newRoom.min;
-                newMin.y = room.min.y + split;
+                Vector2Int newMin = newRoom.min.ToInt();
+                newMin.y = room.min.ToInt().y + split;
                 newRoom.min = newMin;
                 AddRecursiveRooms(map, roomElement, minRoomSize, newRoom, withDoors);
             }
@@ -291,14 +291,14 @@ namespace nv
                 }
 
                 Rect newRoom = room;
-                Vector2 newMax = newRoom.max;
-                newMax.x = room.min.x + split;
+                Vector2Int newMax = newRoom.max.ToInt();
+                newMax.x = room.min.ToInt().x + split;
                 newRoom.max = newMax;
                 AddRecursiveRooms(map, roomElement, minRoomSize, newRoom, withDoors);
 
                 newRoom = room;
-                Vector2 newMin = newRoom.min;
-                newMin.x = room.min.x + split;
+                Vector2Int newMin = newRoom.min.ToInt();
+                newMin.x = room.min.ToInt().x + split;
                 newRoom.min = newMin;
                 AddRecursiveRooms(map, roomElement, minRoomSize, newRoom, withDoors);
             }
