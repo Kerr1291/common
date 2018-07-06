@@ -178,5 +178,10 @@ namespace nv
         {
             Instance.rng.RandomShuffle(elements);
         }
+
+        public static void Shuffle2D<T>(ref T[][] data)
+        {
+            Instance.rng.Shuffle2D(ref data);
+        }
     }
 }

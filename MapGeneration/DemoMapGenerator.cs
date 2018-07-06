@@ -6,6 +6,8 @@ namespace nv
 {
     public class DemoMapGenerator : MonoBehaviour
     {
+        public UnityEngine.SceneManagement.Scene test;
+
         [EditScriptable]
         public ProcGenMap mapToGenerate;
         

@@ -8,28 +8,6 @@ namespace nv
 {
     public static class Mathnv
     {
-        public static int GetFirstFlippedBitIndex( byte b )
-        {
-            for( int i = 0; i < 8; ++i )
-            {
-                bool r = ((1 << i) & b) == 0;
-                if( !r )
-                    return i;
-            }
-            return -1;
-        }
-
-        public static int GetFirstFlippedBitIndex( int b )
-        {
-            for( int i = 0; i < 32; ++i )
-            {
-                bool r = ((1 << i) & b) == 0;
-                if( !r )
-                    return i;
-            }
-            return -1;
-        }
-
         //can't remember the link, but taken from stack overflow or a unity article
         public static bool FastApproximately( float a, float b, float threshold )
         {

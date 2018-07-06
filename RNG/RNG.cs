@@ -284,5 +284,25 @@ namespace nv
                 Mathnv.Swap(elements, i, Rand(i + 1));
             }
         }
+
+        public void Shuffle2D<T>(ref T[][] data)
+        {
+            int n = data.Length;
+            while(n > 1)
+            {
+                n--;
+                int k = Rand(n + 1);
+                int innerLength = data[k].Length;
+                T[] value = new T[innerLength];
+                for(int i = 0; i < innerLength; ++i)
+                    value[i] = data[k][i];
+
+                for(int i = 0; i < innerLength; ++i)
+                    data[k][i] = data[n][i];
+
+                for(int i = 0; i < innerLength; ++i)
+                    data[n][i] = value[i];
+            }
+        }
     }
 }

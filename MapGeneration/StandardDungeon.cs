@@ -98,6 +98,14 @@ namespace nv
             yield break;
         }
 
+
+        IEnumerator<Vector2Int> IterateOverMap<T>(ArrayGrid<T> map)
+        {
+            IEnumerator<Vector2Int> iterator = IterateOverArea(map.w, map.h);
+            while(iterator.MoveNext())
+                yield return iterator.Current;
+        }
+
         IEnumerator<int> IterateOver(int from, int to)
         {
             for(int i = from; i < to; ++i)
@@ -105,21 +113,6 @@ namespace nv
                 yield return i;
             }
             yield break;
-        }
-
-        IEnumerator<Vector2Int> IterateOverMap<T>(ArrayGrid<T> map)
-        {
-            var yIter = IterateOver(0, map.h);
-
-            while(yIter.MoveNext())
-            {
-                var xIter = IterateOver(0, map.w);
-
-                while(xIter.MoveNext())
-                {
-                    yield return new Vector2Int(xIter.Current, yIter.Current);
-                }
-            }
         }
 
         IEnumerator<Vector2Int> IterateOverArea(int w, int h)

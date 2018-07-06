@@ -276,7 +276,7 @@ namespace nv
             Play(resume);
         }
 
-        public virtual void PlayRandom(bool resume, bool canPlayPreviousClip)
+        public virtual void PlayRandom(bool resume = false, bool canPlayPreviousClip = true)
         {
             int index = UnityEngine.Random.Range(0, clips.Count);
 

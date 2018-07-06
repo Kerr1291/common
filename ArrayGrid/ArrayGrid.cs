@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -7,7 +8,7 @@ namespace nv
 {
     //For treating a 1D array as a 2D grid       
     [System.Serializable]
-    public class ArrayGrid<T>
+    public class ArrayGrid<T> : IEnumerable, IEnumerable<T>
     {
         List<T> data;
 
@@ -1752,6 +1753,16 @@ namespace nv
             position = areas.GetRandomElementFromList();
 
             return true;
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            return ((IEnumerable)Elements).GetEnumerator();
+        }
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            return ((IEnumerable<T>)Elements).GetEnumerator();
         }
     }
 

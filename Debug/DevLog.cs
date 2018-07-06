@@ -266,9 +266,7 @@ namespace nv
     public class Dev
     {
 #if UNITY_EDITOR
-        public const string MENU_ROOT = "NV";
-        public const string MENU_DEBUG_FOLDER = "Debug";
-        [MenuItem(MENU_ROOT +"/"+ MENU_DEBUG_FOLDER + "/Print Hideflags In Selected (And Children)")]
+        [MenuItem(nv.editor.Consts.MENU_ROOT + "/"+ nv.editor.Consts.MENU_DEBUG_FOLDER + "/Print Hideflags In Selected (And Children)")]
         static void Menu_PrintHideFlags()
         {
             UnityEngine.Object[] selectedAssets = Selection.GetFiltered(typeof(UnityEngine.Object), SelectionMode.Assets);
@@ -282,7 +280,7 @@ namespace nv
             }
         }
 
-        [MenuItem(MENU_ROOT + "/" + MENU_DEBUG_FOLDER + "/Clear Hideflags In Selected (And Children)")]
+        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Clear Hideflags In Selected (And Children)")]
         static void Menu_ClearHideFlags()
         {
             UnityEngine.Object[] selectedAssets = Selection.GetFiltered(typeof(UnityEngine.Object), SelectionMode.Assets);
@@ -296,28 +294,28 @@ namespace nv
             }
         }
 
-        [MenuItem(MENU_ROOT + "/" + MENU_DEBUG_FOLDER + "/Enable Runtime GUI Debug Logging")]
+        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Enable Runtime GUI Debug Logging")]
         static void EnableGUIDebugLogging()
         {
             DevLog.Settings.guiLoggingEnabled = true;
             Dev.Log("Runtime GUI Logging enabled");
         }
 
-        [MenuItem(MENU_ROOT + "/" + MENU_DEBUG_FOLDER + "/Disable Runtime GUI Debug Logging")]
+        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Disable Runtime GUI Debug Logging")]
         static void DisableGUIDebugLogging()
         {
             Dev.Log("Runtime GUI Logging disabled");
             DevLog.Settings.guiLoggingEnabled = false;
         }
 
-        [MenuItem(MENU_ROOT + "/" + MENU_DEBUG_FOLDER + "/Enable Debug Logging")]
+        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Enable Debug Logging")]
         static void EnableDebugLogging()
         {
             DevLog.Settings.loggingEnabled = true;
             Dev.Log("Logging enabled");
         }
 
-        [MenuItem(MENU_ROOT + "/" + MENU_DEBUG_FOLDER + "/Disable Debug Logging")]
+        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Disable Debug Logging")]
         static void DisableDebugLogging()
         {
             Dev.Log("Logging disabled");
