@@ -7,11 +7,8 @@ namespace nv
 {
     public class MapElement : ScriptableObject, IEqualityComparer
     {
-        public int type;
-        public int value;
-        public Color id;
-
         //TODO:
+        public Color id; 
         public bool Empty
         {
             get
@@ -20,14 +17,22 @@ namespace nv
             }
         }
 
+        void OnEnable()
+        { 
+            if(debugColor == default(Color))
+                debugColor = new Color(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value, 1f);
+        }
+
+        public Color debugColor;
+
         public new bool Equals(object x, object y)
         {
-            return (x as MapElement).type == (y as MapElement).type;
+            return (x as MapElement).name == (y as MapElement).name;
         }
 
         public int GetHashCode(object obj)
         {
-            return (obj as MapElement).type.GetHashCode();
+            return (obj as MapElement).name.GetHashCode();
         }
     }
 }

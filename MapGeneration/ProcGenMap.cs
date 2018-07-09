@@ -6,18 +6,36 @@ using System;
 
 namespace nv
 {
-    [System.Serializable]
-    public struct DebugProcGenMappingData
-    {
-        public int type;
-        public Color color;
-    }
-
     public abstract class ProcGenMap : ScriptableObject
     {
-        public List<DebugProcGenMappingData> debugMappingData;
+        public abstract ArrayGrid<MapElement> GeneratedMap
+        {
+            get; protected set;
+        }
 
         public Vector2Int mapSize = new Vector2Int(100, 100);
+
+        //TODO: finish/fix this next - not done yet
+        public MapElement GetScaledElement(Vector2Int subMapPosition, Vector2Int subElementPos, float resolution)
+        {
+            Vector2 scaledPosition = new Vector2(subElementPos.x, subElementPos.y) / resolution;
+            Vector2Int realMapPosition = subMapPosition + Vector2Int.FloorToInt(scaledPosition);
+            return GeneratedMap[realMapPosition];
+        }
+
+        public ArrayGrid<MapElement> CreateSubMap(Vector2Int subMapPosition, int size)
+        {
+            ArrayGrid<MapElement> subMap = new ArrayGrid<MapElement>(size, size);
+
+            var subMapIter = subMap.IterateOverMap();
+            while(subMapIter.MoveNext())
+            {
+                Vector2Int current = subMapIter.Current;
+                subMap[current] = GetScaledElement(subMapPosition, current, size);
+            }
+
+            return subMap;
+        }
 
         [EditScriptable]
         public MapElement defaultFillElement;
@@ -67,18 +85,62 @@ namespace nv
 
         protected virtual Color WriteColor(MapElement type)
         {
-            return WriteColor(type.type);
+            return WriteColor(type.debugColor);
         }
 
-        protected virtual Color WriteColor(int type)
+        protected virtual Color WriteColor(Color typeColor)
         {
-            var matchingType = debugMappingData.Find(x => x.type == type);            
-            return matchingType.color;
+            return typeColor;
         }
+
+        //protected virtual Color WriteColor(int type)
+        //{
+        //    var matchingType = debugMappingData.Find(x => x.type == type);            
+        //    return matchingType.color;
+        //}
 
         protected virtual ArrayGrid<MapElement> CreateBaseMap()
         {
             return new ArrayGrid<MapElement>(mapSize, defaultFillElement);
+        }
+
+
+        static protected IEnumerator<Vector2Int> IterateOverMap<T>(ArrayGrid<T> map)
+        {
+            IEnumerator<Vector2Int> iterator = IterateOverArea(map.w, map.h);
+            while(iterator.MoveNext())
+                yield return iterator.Current;
+        }
+
+        static protected IEnumerator<int> IterateOver(int from, int to)
+        {
+            for(int i = from; i < to; ++i)
+            {
+                yield return i;
+            }
+            yield break;
+        }
+
+        static protected IEnumerator<Vector2Int> IterateOverArea(Vector2Int size)
+        {
+            IEnumerator<Vector2Int> iterator = IterateOverArea(size.x, size.y);
+            while(iterator.MoveNext())
+                yield return iterator.Current;
+        }
+
+        static protected IEnumerator<Vector2Int> IterateOverArea(int w, int h)
+        {
+            var yIter = IterateOver(0, h);
+
+            while(yIter.MoveNext())
+            {
+                var xIter = IterateOver(0, w);
+
+                while(xIter.MoveNext())
+                {
+                    yield return new Vector2Int(xIter.Current, yIter.Current);
+                }
+            }
         }
     }
 }

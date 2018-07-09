@@ -20,6 +20,11 @@ namespace nv
         int generationAttempts = 0;
         int buildingCount = 0;
 
+        public override ArrayGrid<MapElement> GeneratedMap
+        {
+            get; protected set;
+        }
+
         [Range(0f,1f)]
         public float percentageOfGroundToFillWithTrees = .3f;
 
@@ -74,6 +79,8 @@ namespace nv
 
             Debug.Log("Done");
             yield return WriteTestOutput(map);
+
+            GeneratedMap = map;
 
             yield break;
         }

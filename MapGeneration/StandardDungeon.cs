@@ -8,7 +8,7 @@ namespace nv
 {
     public class StandardDungeon : ProcGenMap
     {
-        public int roomNumberOffset = 1000;
+        //public int roomNumberOffset = 1000;
         public int maxNumberOfRooms = 10;
         public bool placeDoors = true;
 
@@ -30,6 +30,16 @@ namespace nv
 
         [EditScriptable]
         public MapElement defaultDoorElement;
+
+        //values used by the room connection algorithm
+        int valueRoom = 0;
+        int valueWall = -1;
+        int valueHall = -2;
+
+        public override ArrayGrid<MapElement> GeneratedMap
+        {
+            get; protected set;
+        }
 
         public override IEnumerator Generate()
         {
@@ -87,6 +97,8 @@ namespace nv
                 //TODO: logic to check if dungeon is valid
 
                 generationAttempts++;
+                GeneratedMap = map;
+
                 break;
             }
 
@@ -98,38 +110,6 @@ namespace nv
             yield break;
         }
 
-
-        IEnumerator<Vector2Int> IterateOverMap<T>(ArrayGrid<T> map)
-        {
-            IEnumerator<Vector2Int> iterator = IterateOverArea(map.w, map.h);
-            while(iterator.MoveNext())
-                yield return iterator.Current;
-        }
-
-        IEnumerator<int> IterateOver(int from, int to)
-        {
-            for(int i = from; i < to; ++i)
-            {
-                yield return i;
-            }
-            yield break;
-        }
-
-        IEnumerator<Vector2Int> IterateOverArea(int w, int h)
-        {
-            var yIter = IterateOver(0, h);
-
-            while(yIter.MoveNext())
-            {
-                var xIter = IterateOver(0, w);
-
-                while(xIter.MoveNext())
-                {
-                    yield return new Vector2Int(xIter.Current, yIter.Current);
-                }
-            }
-        }
-
         protected void FillDisconnectedRoomsWithDifferentValues(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, ref int countOfRoomsFilled)
         {
             IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
@@ -139,11 +119,11 @@ namespace nv
                 Vector2Int current = mapIter.Current;
                 if(map[current] == defaultRoomElement)
                 {
-                    valueMap[current] = defaultRoomElement.value;
+                    valueMap[current] = valueRoom;
                 }
                 else if(map[current] == defaultWallElement)
                 {
-                    valueMap[current] = defaultWallElement.value;
+                    valueMap[current] = valueWall;
                 }
             }
 
@@ -152,9 +132,9 @@ namespace nv
             while(mapIter.MoveNext())
             {
                 Vector2Int current = mapIter.Current;
-                if(valueMap[current] == defaultRoomElement.value)
+                if(valueMap[current] == valueRoom)
                 {
-                    valueMap.FloodFill(current, new List<int>() { defaultWallElement.value }, false, roomNumberOffset + (roomNumber++));
+                    valueMap.FloodFill(current, new List<int>() { valueWall }, false, 1 + (roomNumber++));
                 }
             }
 
@@ -178,11 +158,11 @@ namespace nv
             while(mapIter.MoveNext())
             {
                 Vector2Int current = mapIter.Current;
-                if(valueMap[current] != defaultWallElement.value)
+                if(valueMap[current] != valueWall)
                 {
-                    if(valueMap.GetAdjacentElementsOfType(current, false, defaultWallElement.value).Count > 0)
+                    if(valueMap.GetAdjacentElementsOfType(current, false, valueWall).Count > 0)
                     {
-                        int roomIndex = valueMap[current] - roomNumberOffset;
+                        int roomIndex = valueMap[current] - 1;
                         rooms[roomIndex].Add(current);
                     }
                 }
@@ -374,10 +354,10 @@ namespace nv
                         p1.y -= dir.y;
                 }
 
-                if(valueMap[p0] == defaultWallElement.value)
-                    valueMap[p0] = defaultCorridorElement.value;
-                if(valueMap[p1] == defaultWallElement.value)
-                    valueMap[p1] = defaultCorridorElement.value;
+                if(valueMap[p0] == valueWall)
+                    valueMap[p0] = valueHall;
+                if(valueMap[p1] == valueWall)
+                    valueMap[p1] = valueHall;
 
                 // connect corridors if on the same level
                 if(p0.x == p1.x)
@@ -385,15 +365,15 @@ namespace nv
                     while(p0.y != p1.y)
                     {
                         p0.y += dir.y;
-                        if(valueMap[p0] == defaultWallElement.value)
+                        if(valueMap[p0] == valueWall)
                         {
-                            valueMap[p0] = defaultCorridorElement.value;
+                            valueMap[p0] = valueHall;
                         }
                     }
 
-                    if(valueMap[p0] == defaultWallElement.value)
+                    if(valueMap[p0] == valueWall)
                     {
-                        valueMap[p0] = defaultCorridorElement.value;
+                        valueMap[p0] = valueHall;
                     }
 
                     return true;
@@ -404,15 +384,15 @@ namespace nv
                     while(p0.x != p1.x)
                     {
                         p0.x += dir.x;
-                        if(valueMap[p0] == defaultWallElement.value)
+                        if(valueMap[p0] == valueWall)
                         {
-                            valueMap[p0] = defaultCorridorElement.value;
+                            valueMap[p0] = valueHall;
                         }
                     }
 
-                    if(valueMap[p0] == defaultWallElement.value)
+                    if(valueMap[p0] == valueWall)
                     {
-                        valueMap[p0] = defaultCorridorElement.value;
+                        valueMap[p0] = valueHall;
                     }
 
                     return true;
@@ -430,11 +410,11 @@ namespace nv
             while(mapIter.MoveNext())
             {
                 Vector2Int current = mapIter.Current;
-                if(valueMap[current] == defaultCorridorElement.value)
+                if(valueMap[current] == valueHall)
                 {
                     map[current] = defaultCorridorElement;
                 }
-                else if(valueMap[current] == defaultWallElement.value)
+                else if(valueMap[current] == valueWall)
                 {
                     map[current] = defaultWallElement;
                 }
@@ -463,7 +443,7 @@ namespace nv
                     if((corridorCells == 1 && doorCells == 0 && roomCells > 0 && roomCells < 4)
                      ||(corridorCells == 0 && doorCells == 0))
                     {
-                        float exist = GameRNG.Rand(0f, 1000f) / 1000f;
+                        float exist = GameRNG.Randf();
                         if(exist < doorProbability)
                         {
                             map[current] = defaultDoorElement;

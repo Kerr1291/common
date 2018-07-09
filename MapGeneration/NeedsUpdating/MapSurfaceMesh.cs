@@ -3,11 +3,10 @@ using System;
 using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
-using Map = nv.ArrayGrid<nv.MapElement>;
 
 namespace nv
 {
-    public class VoxelGridSurface : MonoBehaviour
+    public class MapSurfaceMesh : ScriptableObject
     {
         public MeshFilter meshFilter;
         public MeshCollider meshCollider;
@@ -27,13 +26,13 @@ namespace nv
 
         public bool useUVMap = false;
 
-        public VoxelGrid xNeighbor, yNeighbor, xyNeighbor;
+        public MapMesh xNeighbor, yNeighbor, xyNeighbor;
 
         [SerializeField]
         [HideInInspector]
-        VoxelGridWall wall;
+        MapWallMesh wall;
 
-        public VoxelGridWall Wall
+        public MapWallMesh Wall
         {
             get { return wall; }
             private set { wall = value; }
@@ -88,17 +87,15 @@ namespace nv
         [HideInInspector]
         Vector2[] simple_uvs;
 
-        public void Init(int resolution, VoxelGridWall wall)
+        public void Init(GameObject root, int chunkSize, MapWallMesh wall)
         {
-            Resolution = resolution;
+            Resolution = chunkSize;
             Wall = wall;
-            gameObject.GetOrAddComponentIfNull(ref meshFilter);
-            gameObject.GetOrAddComponentIfNull(ref meshCollider);
-            //Dev.GetOrAddComponentIfNull(ref meshFilter, gameObject);
-            //Dev.GetOrAddComponentIfNull(ref meshCollider, gameObject);
+            root.GetOrAddComponentIfNull(ref meshFilter);
+            root.GetOrAddComponentIfNull(ref meshCollider);
 
             meshFilter.mesh = mesh = new Mesh();
-            mesh.name = "VoxelGridSurface Mesh";
+            mesh.name = "Surface Mesh";
             vertices = new List<Vector3>();
             triangles = new List<int>();
 

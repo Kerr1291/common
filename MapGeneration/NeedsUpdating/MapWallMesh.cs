@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace nv
 {
 
-    public class VoxelGridWall : MonoBehaviour
+    public class MapWallMesh : ScriptableObject
     {
         public MeshFilter meshFilter;
         public MeshCollider meshCollider;
@@ -61,16 +61,16 @@ namespace nv
         [HideInInspector]
         List<Vector2> simple_uvs;
 
-        public void Init(int resolution)
+        public void Init(GameObject root, int chunkSize)
         {
-            Resolution = resolution;
+            Resolution = chunkSize;
 
-            gameObject.GetOrAddComponentIfNull(ref meshFilter);
-            gameObject.GetOrAddComponentIfNull(ref meshCollider);
+            root.GetOrAddComponentIfNull(ref meshFilter);
+            root.GetOrAddComponentIfNull(ref meshCollider);
 
             meshFilter.mesh = mesh = new Mesh();
 
-            mesh.name = "VoxelGridWall Mesh";
+            mesh.name = "Wall Mesh";
             vertices = new List<Vector3>();
             triangles = new List<int>();
 

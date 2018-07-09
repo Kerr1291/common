@@ -1828,5 +1828,12 @@ namespace nv
             }
             return outData;
         }
+
+        public static IEnumerator<Vector2Int> IterateOverMap<T>(this ArrayGrid<T> map)
+        {
+            IEnumerator<Vector2Int> iterator = Mathnv.IterateOverArea(map.w, map.h);
+            while(iterator.MoveNext())
+                yield return iterator.Current;
+        }
     }
 }

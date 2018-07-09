@@ -151,5 +151,36 @@ namespace nv
             area.height = Mathf.Min( area.yMax, min_max.yMax ) - area.y;
             return area;
         }
+
+        public static IEnumerator<int> IterateOver(int from, int to)
+        {
+            for(int i = from; i < to; ++i)
+            {
+                yield return i;
+            }
+            yield break;
+        }
+
+        public static IEnumerator<Vector2Int> IterateOverArea(int w, int h)
+        {
+            var yIter = IterateOver(0, h);
+
+            while(yIter.MoveNext())
+            {
+                var xIter = IterateOver(0, w);
+
+                while(xIter.MoveNext())
+                {
+                    yield return new Vector2Int(xIter.Current, yIter.Current);
+                }
+            }
+        }
+
+        public static IEnumerator<Vector2Int> IterateOverArea(Vector2Int size)
+        {
+            IEnumerator<Vector2Int> iterator = IterateOverArea(size.x, size.y);
+            while(iterator.MoveNext())
+                yield return iterator.Current;
+        }
     }
 }
