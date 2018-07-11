@@ -30,6 +30,8 @@ namespace nv
             }
         }
 
+        public float chunkScale = 1f;
+
         [SerializeField, HideInInspector]
         List<MapMesh> chunks;
 
@@ -63,7 +65,9 @@ namespace nv
 
         IEnumerator Start()
         {
+            yield return mapData.Generate();
             yield return CreateChunks();
+            yield return RenderChunks();
         }
 
         public IEnumerator CreateChunks()
@@ -73,31 +77,23 @@ namespace nv
             chunks = new List<MapMesh>();
             chunkViews = new List<GameObject>();
 
-            var visibleIter = Mathnv.IterateOverArea(visibleArea);
+            var visibleIter = Mathnv.GetAreaEnumerator(visibleArea);
             while(visibleIter.MoveNext())
             {
                 Vector2Int current = visibleIter.Current;
                 CreateChunk(current);
             }
 
-            yield return RenderChunks();
-
             yield break;
         }
 
         public IEnumerator RenderChunks()
         {
-            var visibleIter = Mathnv.IterateOverArea(visibleArea);
+            var visibleIter = Mathnv.GetAreaEnumerator(visibleArea);
             while(visibleIter.MoveNext())
             {
-                Vector2Int current = visibleIter.Current;
-
-                //TODO: also finish this
-                Vector2Int subMapPos = current * ChunkSize;
-
-                var subMap = mapData.CreateSubMap(subMapPos, chunkSize);
-
-                this[current].GenerateMesh(, generateCollisionMesh);
+                Vector2Int current = visibleIter.Current;                
+                this[current].GenerateMesh(generateCollisionMesh);
             }
             yield break;
         }
@@ -107,8 +103,8 @@ namespace nv
             MapMesh chunk = Instantiate(chunkDefinition) as MapMesh;
             GameObject chunkRoot = new GameObject(chunk.name + " root");
             chunkRoot.transform.parent = transform.parent;
-            chunk.Init(chunkRoot, ChunkSize, chunkIndex);
             chunk.name = "Chunk " + chunks.Count;
+            chunk.Init(mapData, chunkRoot, ChunkSize, chunkIndex, chunkScale);
             chunks.Add(chunk);
 
 

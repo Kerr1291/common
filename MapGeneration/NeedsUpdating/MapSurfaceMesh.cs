@@ -8,7 +8,9 @@ namespace nv
 {
     public class MapSurfaceMesh : ScriptableObject
     {
+        [HideInInspector]
         public MeshFilter meshFilter;
+        [HideInInspector]
         public MeshCollider meshCollider;
 
         [Header("Heights for corner case vertices")]
@@ -26,6 +28,7 @@ namespace nv
 
         public bool useUVMap = false;
 
+        [HideInInspector]
         public MapMesh xNeighbor, yNeighbor, xyNeighbor;
 
         [SerializeField]
@@ -305,7 +308,7 @@ namespace nv
             } while(t != 0);
         }
 
-        public void FillFirstRowCache(Map mesh_input)
+        public void FillFirstRowCache(ArrayGrid<MapElement> mesh_input)
         {
             CacheFirstCorner(mesh_input[0, 0]);
             int i = 0;
@@ -316,7 +319,7 @@ namespace nv
             if(xNeighbor != null)
             {
                 Vector3 offsetx = new Vector3(Resolution, 0, 0);
-                CacheNextEdgeAndCornerWithOffset(i * 2, mesh_input[i], xNeighbor.BoundryLayer[0], offsetx);
+                CacheNextEdgeAndCornerWithOffset(i * 2, mesh_input[i], xNeighbor.SubMap[0], offsetx);
             }
         }
 
@@ -418,7 +421,7 @@ namespace nv
             //}
         }
 
-        public void TriangulateRows(Map mesh_input)
+        public void TriangulateRows(ArrayGrid<MapElement> mesh_input)
         {
             for(int j = 0; j < mesh_input.ValidArea.size.y; ++j)
             {
@@ -460,15 +463,15 @@ namespace nv
                 Wall.PrepareCacheForNextRow();
         }
 
-        private void TriangulateGapRow(Map mesh_input)
+        private void TriangulateGapRow(ArrayGrid<MapElement> mesh_input)
         {
             Vector3 offset = new Vector3(0, 0, Resolution);
 
             SwapRowCaches();
             MapElement ta = mesh_input[0, (int)mesh_input.ValidArea.size.y];
             MapElement tb = mesh_input[1, (int)mesh_input.ValidArea.size.y];
-            MapElement tc = yNeighbor.BoundryLayer[0, 0];
-            MapElement td = yNeighbor.BoundryLayer[1, 0];
+            MapElement tc = yNeighbor.SubMap[0, 0];
+            MapElement td = yNeighbor.SubMap[1, 0];
             //CacheFirstCornerWithOffset( tc, offset );
             //CacheNextMiddleEdgeWithOffset( mesh_input[ (int)mesh_input.ValidArea.size.y * Resolution ], tc, offset );
             CacheFirstCornerWithOffset(tc, offset);
@@ -481,8 +484,8 @@ namespace nv
             {
                 MapElement a = mesh_input[i, (int)mesh_input.ValidArea.size.y];
                 MapElement b = mesh_input[i + 1, (int)mesh_input.ValidArea.size.y];
-                MapElement c = yNeighbor.BoundryLayer[i, 0];
-                MapElement d = yNeighbor.BoundryLayer[i + 1, 0];
+                MapElement c = yNeighbor.SubMap[i, 0];
+                MapElement d = yNeighbor.SubMap[i + 1, 0];
 
                 int cacheIndex = i * 2;
 
@@ -496,9 +499,9 @@ namespace nv
             if(xyNeighbor != null)
             {
                 MapElement ax = mesh_input[(int)mesh_input.ValidArea.size.y, (int)mesh_input.ValidArea.size.y];
-                MapElement bx = xNeighbor.BoundryLayer[0, (int)mesh_input.ValidArea.size.y];
-                MapElement cx = yNeighbor.BoundryLayer[(int)mesh_input.ValidArea.size.y, 0];
-                MapElement dx = xyNeighbor.BoundryLayer[0, 0];
+                MapElement bx = xNeighbor.SubMap[0, (int)mesh_input.ValidArea.size.y];
+                MapElement cx = yNeighbor.SubMap[(int)mesh_input.ValidArea.size.y, 0];
+                MapElement dx = xyNeighbor.SubMap[0, 0];
 
                 Vector3 offsetx = new Vector3(Resolution, 0, 0);
                 Vector3 offsetz = new Vector3(0, 0, Resolution);
@@ -513,12 +516,12 @@ namespace nv
             }
         }
 
-        private void TriangulateGapCell(Map mesh_input, int row)
+        private void TriangulateGapCell(ArrayGrid<MapElement> mesh_input, int row)
         {
             MapElement a = mesh_input[(int)mesh_input.ValidArea.size.x, row];
-            MapElement b = xNeighbor.BoundryLayer[0, row];
+            MapElement b = xNeighbor.SubMap[0, row];
             MapElement c = mesh_input[(int)mesh_input.ValidArea.size.x, row + 1];
-            MapElement d = xNeighbor.BoundryLayer[0, row + 1];
+            MapElement d = xNeighbor.SubMap[0, row + 1];
 
             Vector3 offset = new Vector3(Resolution, 0, 0);
 
@@ -534,19 +537,19 @@ namespace nv
         int GetCellType(MapElement a, MapElement b, MapElement c, MapElement d)
         {
             int cellType = 0;
-            if(a != null && !a.Empty)
+            if(a != null && !a.IsWall)
             {
                 cellType |= 1;
             }
-            if(b != null && !b.Empty)
+            if(b != null && !b.IsWall)
             {
                 cellType |= 2;
             }
-            if(c != null && !c.Empty)
+            if(c != null && !c.IsWall)
             {
                 cellType |= 4;
             }
-            if(d != null && !d.Empty)
+            if(d != null && !d.IsWall)
             {
                 cellType |= 8;
             }

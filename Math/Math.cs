@@ -152,7 +152,11 @@ namespace nv
             return area;
         }
 
-        public static IEnumerator<int> IterateOver(int from, int to)
+        /// <summary>
+        /// Iterate over a range, [from, to). 
+        /// Note that the the 'to' element is exclusive.
+        /// </summary>
+        public static IEnumerator<int> GetRangeEnumerator(int from, int to)
         {
             for(int i = from; i < to; ++i)
             {
@@ -161,13 +165,22 @@ namespace nv
             yield break;
         }
 
-        public static IEnumerator<Vector2Int> IterateOverArea(int w, int h)
+        public static IEnumerator<int> GetRangeEnumerator(Range range)
         {
-            var yIter = IterateOver(0, h);
+            for(int i = (int)range.Min; i < (int)range.Max; ++i)
+            {
+                yield return i;
+            }
+            yield break;
+        }
+
+        public static IEnumerator<Vector2Int> GetAreaEnumerator(int w, int h)
+        {
+            var yIter = GetRangeEnumerator(0, h);
 
             while(yIter.MoveNext())
             {
-                var xIter = IterateOver(0, w);
+                var xIter = GetRangeEnumerator(0, w);
 
                 while(xIter.MoveNext())
                 {
@@ -176,9 +189,31 @@ namespace nv
             }
         }
 
-        public static IEnumerator<Vector2Int> IterateOverArea(Vector2Int size)
+        public static IEnumerator<Vector2Int> GetAreaEnumerator(Vector2Int size)
         {
-            IEnumerator<Vector2Int> iterator = IterateOverArea(size.x, size.y);
+            IEnumerator<Vector2Int> iterator = GetAreaEnumerator(size.x, size.y);
+            while(iterator.MoveNext())
+                yield return iterator.Current;
+        }
+
+        public static IEnumerator<Vector2Int> GetAreaEnumerator(int fromX, int fromY, int toX, int toY)
+        {
+            var yIter = GetRangeEnumerator(fromY, toY);
+
+            while(yIter.MoveNext())
+            {
+                var xIter = GetRangeEnumerator(fromX, toX);
+
+                while(xIter.MoveNext())
+                {
+                    yield return new Vector2Int(xIter.Current, yIter.Current);
+                }
+            }
+        }
+
+        public static IEnumerator<Vector2Int> GetAreaEnumerator(Vector2Int from, Vector2Int to)
+        {
+            IEnumerator<Vector2Int> iterator = GetAreaEnumerator(from.x, from.y, to.x, to.y);
             while(iterator.MoveNext())
                 yield return iterator.Current;
         }

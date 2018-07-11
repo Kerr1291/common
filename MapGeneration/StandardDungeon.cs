@@ -356,6 +356,8 @@ namespace nv
 
                 if(valueMap[p0] == valueWall)
                     valueMap[p0] = valueHall;
+
+                //TODO: fix nullref here
                 if(valueMap[p1] == valueWall)
                     valueMap[p1] = valueHall;
 

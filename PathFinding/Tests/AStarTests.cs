@@ -103,7 +103,7 @@ namespace nv.Tests
             var path = pathFinder.result;
             map.SetElements(path, 3);
             Texture2D mapTex;
-            mapTex = map.ArrayGridToTexture(WriteColor);
+            mapTex = map.ToTexture(WriteColor);
             yield return WriteToFile(mapTex, testOutputPath + "1000by1000BasicTestOutputPath.png");
 
             Assert.That(File.Exists(testOutputPath + "1000by1000BasicTestOutputPath.png"), Is.True, "Failed to write test output to file.");

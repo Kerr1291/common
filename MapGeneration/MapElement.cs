@@ -8,14 +8,8 @@ namespace nv
     public class MapElement : ScriptableObject, IEqualityComparer
     {
         //TODO:
-        public Color id; 
-        public bool Empty
-        {
-            get
-            {
-                return true;
-            }
-        }
+        //public Color id; 
+        public bool IsWall = false;
 
         void OnEnable()
         { 

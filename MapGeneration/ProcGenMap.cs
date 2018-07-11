@@ -14,29 +14,7 @@ namespace nv
         }
 
         public Vector2Int mapSize = new Vector2Int(100, 100);
-
-        //TODO: finish/fix this next - not done yet
-        public MapElement GetScaledElement(Vector2Int subMapPosition, Vector2Int subElementPos, float resolution)
-        {
-            Vector2 scaledPosition = new Vector2(subElementPos.x, subElementPos.y) / resolution;
-            Vector2Int realMapPosition = subMapPosition + Vector2Int.FloorToInt(scaledPosition);
-            return GeneratedMap[realMapPosition];
-        }
-
-        public ArrayGrid<MapElement> CreateSubMap(Vector2Int subMapPosition, int size)
-        {
-            ArrayGrid<MapElement> subMap = new ArrayGrid<MapElement>(size, size);
-
-            var subMapIter = subMap.IterateOverMap();
-            while(subMapIter.MoveNext())
-            {
-                Vector2Int current = subMapIter.Current;
-                subMap[current] = GetScaledElement(subMapPosition, current, size);
-            }
-
-            return subMap;
-        }
-
+        
         [EditScriptable]
         public MapElement defaultFillElement;
 
@@ -45,7 +23,7 @@ namespace nv
         protected virtual IEnumerator WriteTestOutput(ArrayGrid<MapElement> map)
         {
             string testOutputPath = "Assets/common/MapGeneration/";
-            Texture2D debugOutput = map.ArrayGridToTexture(WriteColor);
+            Texture2D debugOutput = map.ToTexture(WriteColor);
             yield return WriteToFile(debugOutput, testOutputPath + this.GetType().Name + ".png");
         }
 
@@ -53,7 +31,7 @@ namespace nv
         {
             Func<int, int> func = (int t) => { return t; };
             string testOutputPath = "Assets/common/MapGeneration/";
-            var debugOutput = map.ArrayGridToData<int, int>(func);
+            var debugOutput = map.ToData<int, int>(func);
             yield return WriteToFile(debugOutput, testOutputPath + this.GetType().Name + "_values.txt");
         }
 

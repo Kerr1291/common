@@ -114,7 +114,7 @@ public class MapScene : MonoBehaviour {
 
                     if(pathFinder.debugPath != null)
                     {
-                        mapTex = debugMap.ArrayGridToTexture(WriteColor);
+                        mapTex = debugMap.ToTexture(WriteColor);
                         debugMap.SetElements(pathFinder.debugPath, 2);
                         UpdateSprite();
                     }
@@ -127,7 +127,7 @@ public class MapScene : MonoBehaviour {
                 map.SetElements(path, 3);
             }
 
-            mapTex = map.ArrayGridToTexture(WriteColor);
+            mapTex = map.ToTexture(WriteColor);
 
             //yield return WriteToFile(Application.dataPath + "/TestMap.png");
         }
@@ -159,7 +159,7 @@ public class MapScene : MonoBehaviour {
                 throttle++;
                 if(throttle % setupThrottle == 0)
                 {
-                    mapTex = map.ArrayGridToTexture(WriteColor);
+                    mapTex = map.ToTexture(WriteColor);
                     UpdateSprite();
                     yield return new WaitForEndOfFrame();
                 }

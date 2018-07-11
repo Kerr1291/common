@@ -9,7 +9,9 @@ namespace nv
 
     public class MapWallMesh : ScriptableObject
     {
+        [HideInInspector]
         public MeshFilter meshFilter;
+        [HideInInspector]
         public MeshCollider meshCollider;
 
         public float bottom, top;

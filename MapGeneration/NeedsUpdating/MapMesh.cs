@@ -20,14 +20,14 @@ namespace nv
             get; private set;
         }
 
-        [SerializeField]
-        [HideInInspector]
-        MapSurfaceMesh surface;
+        [EditScriptable]
+        public MapSurfaceMesh surfaceDefinition;
 
-        [SerializeField]
-        [HideInInspector]
-        MapWallMesh wall;
-        
+        [EditScriptable]
+        public MapWallMesh wallDefinition;
+
+        ProcGenMap mapData;
+
         public int ChunkSize
         {
             get; private set;
@@ -37,11 +37,11 @@ namespace nv
         {
             get
             {
-                return surface.xNeighbor;
+                return surfaceDefinition.xNeighbor;
             }
             set
             {
-                surface.xNeighbor = value;
+                surfaceDefinition.xNeighbor = value;
             }
         }
 
@@ -49,11 +49,11 @@ namespace nv
         {
             get
             {
-                return surface.yNeighbor;
+                return surfaceDefinition.yNeighbor;
             }
             set
             {
-                surface.yNeighbor = value;
+                surfaceDefinition.yNeighbor = value;
             }
         }
 
@@ -61,11 +61,11 @@ namespace nv
         {
             get
             {
-                return surface.xyNeighbor;
+                return surfaceDefinition.xyNeighbor;
             }
             set
             {
-                surface.xyNeighbor = value;
+                surfaceDefinition.xyNeighbor = value;
             }
         }
 
@@ -74,8 +74,34 @@ namespace nv
             get; private set;
         }
 
-        public void Init(GameObject root, int chunkSize, Vector2Int chunkIndex)
+        public float ChunkScale
         {
+            get; private set;
+        }
+
+        ArrayGrid<MapElement> subMap;
+        public ArrayGrid<MapElement> SubMap
+        {
+            get
+            {
+                if(subMap == null)
+                {
+                    Vector2Int sourceAreaPos = ChunkIndex * ChunkSize; //TODO: add an offset for the "current position" on the map to render from
+                    Vector2 sourceAreaSize = new Vector2(ChunkSize, ChunkSize) * ChunkScale;
+                    Vector2Int chunkMapSize = new Vector2Int(ChunkSize, ChunkSize);
+
+                    Debug.Log("CI " + ChunkIndex);
+                    subMap = mapData.GeneratedMap.MapToSubGrid(sourceAreaPos, Vector2Int.FloorToInt(sourceAreaSize), chunkMapSize);
+                }
+                return subMap;
+            }
+        }
+
+        public void Init(ProcGenMap map, GameObject root, int chunkSize, Vector2Int chunkIndex, float chunkScale)
+        {
+            mapData = map;
+            ChunkScale = chunkScale;
+
             //and finish this
             ChunkSize = chunkSize;
             ChunkIndex = chunkIndex;
@@ -84,24 +110,27 @@ namespace nv
             Vector2Int chunkPos = chunkIndex * ChunkSize;
             Vector3 worldChunkPos = new Vector3(chunkPos.x, 0f, chunkPos.y);
             WorldLocation.localPosition = worldChunkPos;
-            
-            GameObject surfaceRoot = new GameObject("Surface Mesh");
-            GameObject wallRoot = new GameObject("Wall Mesh");
+
+            GameObject surfaceRoot = new GameObject("Surface Mesh " + ChunkIndex);
+            GameObject wallRoot = new GameObject("Wall Mesh " + ChunkIndex);
+
+            surfaceRoot.transform.SetParent(root.transform);
+            surfaceRoot.transform.SetParent(root.transform);
 
             //create the mesh components
-            wall.Init(wallRoot, ChunkSize);            
-            surface.Init(surfaceRoot, ChunkSize, wall);
+            wallDefinition.Init(wallRoot, ChunkSize);
+            surfaceDefinition.Init(surfaceRoot, ChunkSize, wallDefinition);
         }
 
-        public void GenerateMesh(ProcGenMap sourceData, bool generateCollisionMesh = true)
+        public void GenerateMesh(bool generateCollisionMesh = true)
         {
-            surface.Clear();
+            surfaceDefinition.Clear();
 
-            surface.FillFirstRowCache(sourceData);
+            surfaceDefinition.FillFirstRowCache(SubMap);
 
-            surface.TriangulateRows(sourceData);
+            surfaceDefinition.TriangulateRows(SubMap);
 
-            surface.Apply(generateCollisionMesh);
+            surfaceDefinition.Apply(generateCollisionMesh);
         }
     }
 }
