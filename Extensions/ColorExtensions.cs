@@ -6,7 +6,6 @@ namespace nv
 {
     public static class ColorExtensions
     {
-
         //Unity 5.2 and onward removed ToHexStringRGB in favor of the ColorUtility class methods
         public static string ColorToHex(this Color color)
         {

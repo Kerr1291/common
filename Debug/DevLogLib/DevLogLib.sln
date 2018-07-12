@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevLogLib", "DevLogLib.csproj", "{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		DebugEditor|Any CPU = DebugEditor|Any CPU
+		DebugStandalone|Any CPU = DebugStandalone|Any CPU
+		Release|Any CPU = Release|Any CPU
+		ReleaseStandalone|Any CPU = ReleaseStandalone|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.DebugEditor|Any CPU.ActiveCfg = DebugEditor|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.DebugEditor|Any CPU.Build.0 = DebugEditor|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.DebugStandalone|Any CPU.ActiveCfg = DebugStandalone|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.DebugStandalone|Any CPU.Build.0 = DebugStandalone|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.ReleaseStandalone|Any CPU.ActiveCfg = ReleaseStandalone|Any CPU
+		{BFFCE2F1-5BCA-48F5-97F1-D004DD55CBA0}.ReleaseStandalone|Any CPU.Build.0 = ReleaseStandalone|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

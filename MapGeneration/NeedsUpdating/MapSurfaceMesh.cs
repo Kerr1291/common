@@ -588,9 +588,16 @@ namespace nv
 
         void SetVertexHeight(float height, int vertex)
         {
-            Vector3 v = vertices[vertex];
-            v.y = height;
-            vertices[vertex] = v;
+            try
+            {
+                //Vector3 v = vertices[vertex];
+                //v.y = height;
+                vertices[vertex] = vertices[vertex].SetY(height);
+            }
+            catch(Exception e)
+            {
+                Dev.LogError("Exception: " + e.Message + string.Format(" :: Params height {0} ; vertx {1} ; vertices.Count {3} ", height, vertex, vertices.Count));
+            }
         }
 
         //taken from 

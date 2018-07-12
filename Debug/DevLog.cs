@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿#if LOGLIB
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +14,86 @@ using DevLoggingOutput = nv.DevLog;
 
 //disable the unreachable code detected warning for this file
 #pragma warning disable 0162
-    
+
+#if LOGLIB
+namespace nv.Logger
+{
+    public static class LogHelpers
+    {
+        //Unity 5.2 and onward removed ToHexStringRGB in favor of the ColorUtility class methods
+        public static string ColorToHex(Color color)
+        {
+#if UNITY_5_1
+        return color.ToHexStringRGB();
+#else
+            return ColorUtility.ToHtmlStringRGB(color);
+#endif
+        }
+        public static string ToHexString(int val)
+        {
+            return val.ToString("X");
+        }
+    }
+
+    public abstract class LogSingleton : MonoBehaviour
+    {
+    }
+
+    public class LogSingleton<T> : LogSingleton where T : MonoBehaviour
+    {
+        private static T _instance;
+
+        private static object _lock = new object();
+
+        public static T Instance
+        {
+            get
+            {
+                if(applicationIsQuitting)
+                    return null;
+
+                lock (_lock)
+                {
+                    if(_instance == null)
+                    {
+                        _instance = (T)FindObjectOfType(typeof(T));
+
+                        if(FindObjectsOfType(typeof(T)).Length > 1)
+                            return _instance;
+
+                        if(_instance == null)
+                        {
+                            GameObject singleton = new GameObject();
+                            _instance = singleton.AddComponent<T>();
+                            singleton.name = "[Singleton] " + typeof(T).ToString();
+
+                            DontDestroyOnLoad(singleton);
+                        }
+                    }
+
+                    return _instance;
+                }
+            }
+        }
+
+        private static bool applicationIsQuitting = false;
+
+        /// <summary>
+        /// When Unity quits, it destroys objects in a random order.
+        /// In principle, a Singleton is only destroyed when application quits.
+        /// If any script calls Instance after it have been destroyed, 
+        ///   it will create a buggy ghost object that will stay on the Editor scene
+        ///   even after stopping playing the Application. Really bad!
+        /// So, this was made to be sure we're not creating that buggy ghost object.
+        /// </summary>
+        public virtual void OnDestroy()
+        {
+            applicationIsQuitting = true;
+        }
+    }
+}
+#endif
+
 namespace nv
 {
     public class DevLog
@@ -27,15 +107,23 @@ namespace nv
             }
         }
 
+#if LOGLIB
 
+        public class DevLogObject : Logger.LogSingleton<DevLogObject>
+#else
         public class DevLogObject : GameSingleton<DevLogObject>
+#endif
         {
             static public DevLog Logger;
             public static new DevLogObject Instance
             {
                 get
                 {
+#if LOGLIB
+                    DevLogObject logObject = nv.Logger.LogSingleton<DevLogObject>.Instance;
+#else
                     DevLogObject logObject = GameSingleton<DevLogObject>.Instance;
+#endif
                     if(Logger == null)
                     {
                         Logger = new DevLog();
@@ -96,13 +184,25 @@ namespace nv
             get
             {
                 CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
-                return canvas.gameObject.GetOrAddComponent<RectTransform>().rect.size;
+
+                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+                    return canvas.gameObject.GetComponent<RectTransform>().rect.size;
+
+                return canvas.gameObject.AddComponent<RectTransform>().rect.size;
             }
             set
             {
                 CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
-                Rect currentRect = canvas.gameObject.GetOrAddComponent<RectTransform>().rect;
-                canvas.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = value;
+                Rect currentRect;
+                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+                    currentRect = canvas.gameObject.GetComponent<RectTransform>().rect;
+                else
+                    currentRect = canvas.gameObject.AddComponent<RectTransform>().rect;
+
+                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+                    canvas.gameObject.GetComponent<RectTransform>().sizeDelta = value;
+                else
+                    canvas.gameObject.AddComponent<RectTransform>().sizeDelta = value;
             }
         }
 
@@ -112,11 +212,6 @@ namespace nv
         {
 #if UNITY_EDITOR
             settings = (DevLogSettings)AssetDatabase.LoadAssetAtPath("devLogSettings", typeof(DevLogSettings));
-            //asset doesn't exist, create it
-            if(settings == null)
-            {
-
-            }
 #else
             settings = (DevLogSettings)Resources.Load("devLogSettings", typeof(DevLogSettings));            
 #endif
@@ -128,7 +223,10 @@ namespace nv
                 //logRoot = new GameObject("DebugLogRoot");
                 Canvas canvas = logRoot.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvas.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = new Vector2( 1920f * .5f, 1080f * 20f );
+                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+                    canvas.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2( 1920f * .5f, 1080f * 20f );
+                else
+                    canvas.gameObject.AddComponent<RectTransform>().sizeDelta = new Vector2(1920f * .5f, 1080f * 20f);
                 CanvasScaler canvasScaler = logRoot.AddComponent<CanvasScaler>();
                 canvasScaler.referenceResolution = new Vector2( 1920f, 1080f );
             }
@@ -147,11 +245,15 @@ namespace nv
                 csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
                 csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
-                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().anchorMin = new Vector2(0f, 1f);
+                if(logTextPrefab.gameObject.GetComponent<RectTransform>() != null)
+                    logTextPrefab.gameObject.GetComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
+                else
+                    logTextPrefab.gameObject.AddComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
+
+                logTextPrefab.gameObject.GetComponent<RectTransform>().anchorMin = new Vector2(0f, 1f);
                 //logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = Vector2.zero;
-                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().anchoredPosition = new Vector2(0f,0f);
-                logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+                logTextPrefab.gameObject.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f,0f);
+                logTextPrefab.gameObject.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
 
                 logTextPrefab.SetActive(false);
             }
@@ -161,11 +263,15 @@ namespace nv
                 logWindow.transform.SetParent( logRoot.transform );
                 CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
 
+                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+                    canvas.gameObject.GetComponent<RectTransform>().anchorMax = Vector2.one;
+                else
+                    canvas.gameObject.AddComponent<RectTransform>().anchorMax = Vector2.one;
+
                 //create a window that fills its parent
-                canvas.gameObject.GetOrAddComponent<RectTransform>().anchorMax = Vector2.one;
-                canvas.gameObject.GetOrAddComponent<RectTransform>().anchorMin = Vector2.zero;
-                canvas.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = Vector2.zero;
-                canvas.gameObject.GetOrAddComponent<RectTransform>().anchoredPosition = Vector2.zero;
+                canvas.gameObject.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+                canvas.gameObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+                canvas.gameObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
 
                 //add background image
                 Image bg = logWindow.AddComponent<Image>();
@@ -249,7 +355,11 @@ namespace nv
 #if UNITY_EDITOR
                 UnityEngine.Debug.Log(s);
 #else
-            Wms.Framework.Trace.LogDebug(s);
+#if LOGLIB
+                UnityEngine.Debug.Log(s);
+#else
+                Wms.Framework.Trace.LogDebug(s);
+#endif
 #endif
             }
         }
@@ -266,7 +376,7 @@ namespace nv
     public class Dev
     {
 #if UNITY_EDITOR
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/"+ nv.editor.Consts.MENU_DEBUG_FOLDER + "/Print Hideflags In Selected (And Children)")]
+        [MenuItem("NV" + "/"+ "DEBUG" + "/Print Hideflags In Selected (And Children)")]
         static void Menu_PrintHideFlags()
         {
             UnityEngine.Object[] selectedAssets = Selection.GetFiltered(typeof(UnityEngine.Object), SelectionMode.Assets);
@@ -280,7 +390,7 @@ namespace nv
             }
         }
 
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Clear Hideflags In Selected (And Children)")]
+        [MenuItem("NV" + "/" + "DEBUG" + "/Clear Hideflags In Selected (And Children)")]
         static void Menu_ClearHideFlags()
         {
             UnityEngine.Object[] selectedAssets = Selection.GetFiltered(typeof(UnityEngine.Object), SelectionMode.Assets);
@@ -294,44 +404,52 @@ namespace nv
             }
         }
 
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Enable Runtime GUI Debug Logging")]
+        [MenuItem("NV" + "/" + "DEBUG" + "/Enable Runtime GUI Debug Logging")]
         static void EnableGUIDebugLogging()
         {
             DevLog.Settings.guiLoggingEnabled = true;
             Dev.Log("Runtime GUI Logging enabled");
         }
 
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Disable Runtime GUI Debug Logging")]
+        [MenuItem("NV" + "/" + "DEBUG" + "/Disable Runtime GUI Debug Logging")]
         static void DisableGUIDebugLogging()
         {
             Dev.Log("Runtime GUI Logging disabled");
             DevLog.Settings.guiLoggingEnabled = false;
         }
 
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Enable Debug Logging")]
+        [MenuItem("NV" + "/" + "DEBUG" + "/Enable Debug Logging")]
         static void EnableDebugLogging()
         {
             DevLog.Settings.loggingEnabled = true;
             Dev.Log("Logging enabled");
         }
 
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/" + nv.editor.Consts.MENU_DEBUG_FOLDER + "/Disable Debug Logging")]
+        [MenuItem("NV" + "/" + "DEBUG" + "/Disable Debug Logging")]
         static void DisableDebugLogging()
         {
             Dev.Log("Logging disabled");
             DevLog.Settings.loggingEnabled = false;
         }
 #endif
-        #region Internal
+#region Internal
         
         public static string ColorStr(int r, int g, int b)
         {
+#if LOGLIB
+            return Logger.LogHelpers.ToHexString( r ) + Logger.LogHelpers.ToHexString(g) + Logger.LogHelpers.ToHexString(b);
+#else
             return r.ToHexString() + g.ToHexString() + b.ToHexString();
+#endif
         }
 
         public static string ColorStr(float r, float g, float b)
         {
-            return ((int)(255.0f * Mathf.Clamp01(r))).ToHexString() + ((int)(255.0f * Mathf.Clamp01(g))).ToHexString() + ((int)(255.0f * Mathf.Clamp01(b))).ToHexString();
+#if LOGLIB  
+            return Logger.LogHelpers.ToHexString(((int)(255.0f * Mathf.Clamp01(r)))) + Logger.LogHelpers.ToHexString(((int)(255.0f * Mathf.Clamp01(g)))) + Logger.LogHelpers.ToHexString(((int)(255.0f * Mathf.Clamp01(b))));
+#else
+            return ((int)(255.0f * Mathf.Clamp01(r))).ToHexString() + ((int)(255.0f * Mathf.Clamp01(g))).ToHexString() +  ((int)(255.0f * Mathf.Clamp01(b))).ToHexString();
+#endif
         }
 
         static string GetFunctionHeader(int frameOffset = 0, bool fileInfo = false)
@@ -357,21 +475,25 @@ namespace nv
             }
 
             //build parameters string
-            System.Reflection.ParameterInfo[] parameters = method.GetParameters();
             string parameters_name = "";
-            bool add_comma = false;
-            foreach( System.Reflection.ParameterInfo parameter in parameters )
+
+            if(DevLog.Settings.showMethodParameters)
             {
-                if( add_comma )
+                System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+                bool add_comma = false;
+                foreach(System.Reflection.ParameterInfo parameter in parameters)
                 {
-                    parameters_name += ", ";
+                    if(add_comma)
+                    {
+                        parameters_name += ", ";
+                    }
+
+                    parameters_name += Dev.Colorize(parameter.ParameterType.Name, _param_color);
+                    parameters_name += " ";
+                    parameters_name += Dev.Colorize(parameter.Name, _log_color);
+
+                    add_comma = true;
                 }
-
-                parameters_name += Dev.Colorize( parameter.ParameterType.Name, _param_color );
-                parameters_name += " ";
-                parameters_name += Dev.Colorize( parameter.Name, _log_color );
-
-                add_comma = true;
             }
 
             //build function header
@@ -396,22 +518,25 @@ namespace nv
             if(fileInfo)
                 fileLineHeader = file + "(" + line + "):";
 
-            return fileLineHeader + class_name + "." + function_name;
+            if(DevLog.Settings.showClassName)
+                return fileLineHeader + class_name + "." + function_name + " ";
+            else
+                return fileLineHeader + function_name + " ";
         }
 
         static string Colorize( string text, string colorhex )
         {
-#if ENABLE_COLOR
-            string str = "<color=#" + colorhex + ">" + "<b>" + text + "</b>" + "</color>";
-#else
-            string str = text;
-#endif
+            string str;
+            if(DevLog.Settings.colorizeText)
+                str = "<color=#" + colorhex + ">" + "<b>" + text + "</b>" + "</color>";
+            else
+                str = text;
             return str;
         }
 
-        static string FunctionHeader( int frameOffset = 0, bool fileInfo = true )
+        static string FunctionHeader( int frameOffset = 0 )
         {
-            return Dev.Colorize( Dev.GetFunctionHeader( frameOffset, fileInfo), Dev._method_color );
+            return Dev.Colorize( Dev.GetFunctionHeader( frameOffset, DevLog.Settings.showFileAndLineNumber), Dev._method_color );
         }
 
 #endregion
@@ -424,7 +549,11 @@ namespace nv
         {
             get
             {
+#if LOGLIB
+                return Logger.LogHelpers.ColorToHex(DevLog.Settings.methodColor);
+#else
                 return DevLog.Settings.methodColor.ColorToHex();
+#endif
             }
             set
             {
@@ -436,7 +565,11 @@ namespace nv
         {
             get
             {
+#if LOGLIB
+                return Logger.LogHelpers.ColorToHex(DevLog.Settings.logColor);
+#else
                 return DevLog.Settings.logColor.ColorToHex();
+#endif
             }
             set
             {
@@ -448,7 +581,11 @@ namespace nv
         {
             get
             {
+#if LOGLIB
+                return Logger.LogHelpers.ColorToHex(DevLog.Settings.logWarningColor);
+#else
                 return DevLog.Settings.logWarningColor.ColorToHex();
+#endif
             }
             set
             {
@@ -460,7 +597,11 @@ namespace nv
         {
             get
             {
+#if LOGLIB
+                return Logger.LogHelpers.ColorToHex(DevLog.Settings.logErrorColor);
+#else
                 return DevLog.Settings.logErrorColor.ColorToHex();
+#endif
             }
             set
             {
@@ -472,7 +613,11 @@ namespace nv
         {
             get
             {
+#if LOGLIB
+                return Logger.LogHelpers.ColorToHex(DevLog.Settings.paramColor);
+#else
                 return DevLog.Settings.paramColor.ColorToHex();
+#endif
             }
             set
             {
@@ -485,23 +630,43 @@ namespace nv
 
             public static void SetMethodColor( int r, int g, int b ) { Dev._method_color = ColorStr( r, g, b ); }
             public static void SetMethodColor( float r, float g, float b ) { Dev._method_color = ColorStr( r, g, b ); }
+#if LOGLIB
+            public static void SetMethodColor( Color c ) { Dev._method_color = Logger.LogHelpers.ColorToHex(c); }
+#else
             public static void SetMethodColor( Color c ) { Dev._method_color = c.ColorToHex(); }
+#endif
 
             public static void SetLogColor( int r, int g, int b ) { Dev._log_color = ColorStr( r, g, b ); }
             public static void SetLogColor( float r, float g, float b ) { Dev._log_color = ColorStr( r, g, b ); }
+#if LOGLIB
+            public static void SetLogColor( Color c ) { Dev._log_color = Logger.LogHelpers.ColorToHex(c); }
+#else
             public static void SetLogColor( Color c ) { Dev._log_color = c.ColorToHex(); }
+#endif
 
             public static void SetLogWarningColor(int r, int g, int b) { Dev._log_warning_color = ColorStr(r, g, b); }
             public static void SetLogWarningColor(float r, float g, float b) { Dev._log_warning_color = ColorStr(r, g, b); }
+#if LOGLIB
+            public static void SetLogWarningColor(Color c) { Dev._log_warning_color = Logger.LogHelpers.ColorToHex(c); }
+#else
             public static void SetLogWarningColor(Color c) { Dev._log_warning_color = c.ColorToHex(); }
+#endif
 
             public static void SetLogErrorColor(int r, int g, int b) { Dev._log_error_color = ColorStr(r, g, b); }
             public static void SetLogErrorColor(float r, float g, float b) { Dev._log_error_color = ColorStr(r, g, b); }
+#if LOGLIB
+            public static void SetLogErrorColor(Color c) { Dev._log_error_color = Logger.LogHelpers.ColorToHex(c); }
+#else
             public static void SetLogErrorColor(Color c) { Dev._log_error_color = c.ColorToHex(); }
+#endif
 
             public static void SetParamColor( int r, int g, int b ) { Dev._param_color = ColorStr( r, g, b ); }
             public static void SetParamColor( float r, float g, float b ) { Dev._param_color = ColorStr( r, g, b ); }
+#if LOGLIB
+            public static void SetParamColor( Color c ) { Dev._param_color = Logger.LogHelpers.ColorToHex(c); }
+#else
             public static void SetParamColor( Color c ) { Dev._param_color = c.ColorToHex(); }
+#endif
 
         }
 #endregion
@@ -540,7 +705,11 @@ namespace nv
 
         public static void Log( string text, Color color )
         {
+#if LOGLIB
+            DevLoggingOutput.Log(Dev.FunctionHeader() + Dev.Colorize(text, Logger.LogHelpers.ColorToHex(color)));
+#else
             DevLoggingOutput.Log(Dev.FunctionHeader() + Dev.Colorize(text, color.ColorToHex()));
+#endif
         }
 
         /// <summary>
@@ -551,7 +720,7 @@ namespace nv
         /// <param name="var"></param>
         public static void LogVar<T>( T var )
         {
-#if UNITY_EDITOR 
+#if UNITY_EDITOR
             string var_name = GetVarName(var);// var.GetType().
 #else
             string var_name = var == null ? "Null" : var.GetType().Name;
@@ -598,11 +767,15 @@ namespace nv
         }
 #endregion
 
-        #region Helpers
+#region Helpers
 
         public static string ColorString( string input, Color color )
         {
+#if LOGLIB
+            return Dev.Colorize( input, Logger.LogHelpers.ColorToHex(color));
+#else
             return Dev.Colorize( input, color.ColorToHex());
+#endif
         }
 
         public static void PrintHideFlagsInChildren( GameObject parent, bool print_nones = false )
@@ -618,7 +791,11 @@ namespace nv
             foreach( Transform child in parent.GetComponentsInChildren<Transform>() )
             {
                 if(print_nones && child.gameObject.hideFlags == HideFlags.None)
+#if LOGLIB
+                    DevLoggingOutput.Log(Dev.Colorize(child.gameObject.name, Logger.LogHelpers.ColorToHex(Color.white)) + ".hideflags = " + Dev.Colorize(Convert.ToString(child.gameObject.hideFlags), _param_color));
+#else
                     DevLoggingOutput.Log(Dev.Colorize(child.gameObject.name, Color.white.ColorToHex()) + ".hideflags = " + Dev.Colorize(Convert.ToString(child.gameObject.hideFlags), _param_color));
+#endif
                 else if(child.gameObject.hideFlags != HideFlags.None)
                 {
                     if( !showed_where )
@@ -626,7 +803,11 @@ namespace nv
                         Dev.Where();
                         showed_where = true;
                     }
+#if LOGLIB
+                    DevLoggingOutput.Log(Dev.Colorize(child.gameObject.name, Logger.LogHelpers.ColorToHex(Color.white)) + ".hideflags = " + Dev.Colorize(Convert.ToString(child.gameObject.hideFlags), _param_color));
+#else
                     DevLoggingOutput.Log(Dev.Colorize(child.gameObject.name, Color.white.ColorToHex()) + ".hideflags = " + Dev.Colorize(Convert.ToString(child.gameObject.hideFlags), _param_color));
+#endif
                 }
             }
         }
@@ -674,9 +855,10 @@ namespace nv
             return obj == null ? "Null" : obj.GetType().Name;
         }
 #endif
-        #endregion
+#endregion
     }
 
 }
 
 #pragma warning restore 0162
+#endif

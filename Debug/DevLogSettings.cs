@@ -1,11 +1,13 @@
-﻿using UnityEngine;
+﻿#if LOGLIB
+using UnityEngine;
 using System.Collections;
-
 namespace nv
 {
-
     public class DevLogSettings : ScriptableObject
     {
+        public bool showFileAndLineNumber = true;
+        public bool showMethodParameters = false;
+        public bool showClassName = true;
         public bool loggingEnabled = true;
         public bool guiLoggingEnabled = false;
         public bool colorizeText = true;
@@ -15,5 +17,5 @@ namespace nv
         public Color methodColor = Color.cyan;
         public Color paramColor = Color.green;
     }
-
 }
+#endif

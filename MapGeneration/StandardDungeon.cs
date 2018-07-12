@@ -163,6 +163,7 @@ namespace nv
                     if(valueMap.GetAdjacentElementsOfType(current, false, valueWall).Count > 0)
                     {
                         int roomIndex = valueMap[current] - 1;
+                        Dev.LogVar(roomIndex);
                         rooms[roomIndex].Add(current);
                     }
                 }
