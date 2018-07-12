@@ -122,15 +122,5 @@ namespace nv
             result = source.AddComponent<T>();
             return result;
         }
-
-        public static void GetOrAddComponentIfNull<T>( this GameObject source, ref T result ) where T : UnityEngine.Component
-        {
-            if( result != null )
-                return;
-            result = source.GetComponent<T>();
-            if( result != null )
-                return;
-            result = source.AddComponent<T>();
-        }
     }
 }

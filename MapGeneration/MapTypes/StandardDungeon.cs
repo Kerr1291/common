@@ -163,7 +163,6 @@ namespace nv
                     if(valueMap.GetAdjacentElementsOfType(current, false, valueWall).Count > 0)
                     {
                         int roomIndex = valueMap[current] - 1;
-                        Dev.LogVar(roomIndex);
                         rooms[roomIndex].Add(current);
                     }
                 }
@@ -207,21 +206,21 @@ namespace nv
 
                 KeyValuePair<Vector2Int, Vector2Int> closestCells = new KeyValuePair<Vector2Int, Vector2Int>();
                 
-                foreach(Vector2Int cellA in rooms[ci.x])
+                foreach(Vector2Int cellA in rooms[ci.y])
                 {
-                    foreach(Vector2Int cellB in rooms[ci.y])
+                    foreach(Vector2Int cellB in rooms[ci.x])
                     {
-                        int distAB = (int)Vector2Int.Distance(cellA, cellB);
+                        int distAB = Mathf.CeilToInt((cellA - cellB).magnitude);
 
-                        if((distAB < distanceMatrix[ci.x][ci.y]) || (distAB == distanceMatrix[ci.x][ci.y] && GameRNG.CoinToss()))
+                        if((distAB < distanceMatrix[ci.y][ci.x]) || (distAB == distanceMatrix[ci.y][ci.x] && GameRNG.CoinToss()))
                         {
                             closestCells = new KeyValuePair<Vector2Int, Vector2Int>(cellA, cellB);
-                            distanceMatrix[ci.x][ci.y] = distAB;
+                            distanceMatrix[ci.y][ci.x] = distAB;
                         }
                     }
                 }
 
-                closestCellsMatrix[ci.x][ci.y] = closestCells;
+                closestCellsMatrix[ci.y][ci.x] = closestCells;
             }
 
 
@@ -229,7 +228,6 @@ namespace nv
 
             for(int roomA = 0; roomA < rooms.Count; ++roomA)
             {
-
                 int minDist = int.MaxValue;
                 int closestRoom = 0;
 
@@ -246,14 +244,11 @@ namespace nv
                     }
                 }
 
-                if(roomConnections[roomA][closestRoom] == true)
-                    continue;
-
                 // connect roomA to closest one
 
                 KeyValuePair<Vector2Int, Vector2Int> closestCells = closestCellsMatrix[roomA][closestRoom];
 
-                if(AddCorridor(map, valueMap, closestCells, straightConnections))
+                if(!roomConnections[roomA][closestRoom] && AddCorridor(map, valueMap, closestCells, straightConnections))
                 {
                     roomConnections[roomA][closestRoom] = true;
                     roomConnections[closestRoom][roomA] = true;
@@ -269,7 +264,7 @@ namespace nv
                 while(roomAreas.MoveNext())
                 {
                     Vector2Int ci = roomAreas.Current;
-                    transitiveClosure[ci.x][ci.y] = roomConnections[ci.x][ci.y];
+                    transitiveClosure[ci.y][ci.x] = roomConnections[ci.y][ci.x];
                 }
 
                 roomAreas = IterateOverArea(rooms.Count, rooms.Count);
@@ -277,14 +272,14 @@ namespace nv
                 while(roomAreas.MoveNext())
                 {
                     Vector2Int ci = roomAreas.Current;
-                    if( transitiveClosure[ci.x][ci.y] == true && ci.x != ci.y)
+                    if( transitiveClosure[ci.y][ci.x] == true && ci.y != ci.x)
                     {
                         for( int ciZ = 0; ciZ < rooms.Count; ++ciZ )
                         {
-                            if(transitiveClosure[ci.y][ciZ] == true)
+                            if(transitiveClosure[ci.x][ciZ] == true)
                             {
-                                transitiveClosure[ci.x][ciZ] = true;
-                                transitiveClosure[ciZ][ci.x] = true;
+                                transitiveClosure[ci.y][ciZ] = true;
+                                transitiveClosure[ciZ][ci.y] = true;
                             }
                         }
                     }
@@ -294,12 +289,12 @@ namespace nv
 
                 roomAreas = IterateOverArea(rooms.Count, rooms.Count);
 
-                while(roomAreas.MoveNext())
+                while(roomAreas.MoveNext() && toConnectA == -1)
                 {
                     Vector2Int ci = roomAreas.Current;
-                    if(transitiveClosure[ci.x][ci.y] == false && ci.x != ci.y)
+                    if(transitiveClosure[ci.y][ci.x] == false && ci.x != ci.y)
                     {
-                        toConnectA = ci.x;
+                        toConnectA = ci.y;
                         break;
                     }
                 }
@@ -332,7 +327,7 @@ namespace nv
 
             Vector2Int p0 = closestCells.Key;
             Vector2Int p1 = closestCells.Value;
-            Vector2Int dir = new Vector2Int(p1.x > p0.x ? 1 : -1, p1.y > p0.y ? 1 : -1);
+            Vector2Int dir = new Vector2Int(p0.x > p1.x ? -1 : 1, p0.y > p1.y ? -1 : 1);
 
             bool firstHorizontal = GameRNG.CoinToss();
             bool secondHorizontal = GameRNG.CoinToss();
@@ -346,8 +341,17 @@ namespace nv
                 }
 
                 // connect rooms
+                dir.x = p0.x > p1.x ? -1 : 1;
+                dir.y = p0.y > p1.y ? -1 : 1;
 
-                if(p0 != p1)
+                if(p0.x != p1.x && p0.y != p1.y)
+                {
+                    if(firstHorizontal)
+                        p0.x += dir.x;
+                    else
+                        p0.y += dir.y;
+                }
+                if(p0.x != p1.x && p0.y != p1.y)
                 {
                     if(secondHorizontal)
                         p1.x -= dir.x;
@@ -357,14 +361,13 @@ namespace nv
 
                 if(valueMap[p0] == valueWall)
                     valueMap[p0] = valueHall;
-
-                //TODO: fix nullref here
                 if(valueMap[p1] == valueWall)
                     valueMap[p1] = valueHall;
 
                 // connect corridors if on the same level
                 if(p0.x == p1.x)
                 {
+                    dir.y = p0.y > p1.y ? -1 : 1;
                     while(p0.y != p1.y)
                     {
                         p0.y += dir.y;
@@ -384,6 +387,7 @@ namespace nv
 
                 if(p0.y == p1.y)
                 {
+                    dir.x = p0.x > p1.x ? -1 : 1;
                     while(p0.x != p1.x)
                     {
                         p0.x += dir.x;

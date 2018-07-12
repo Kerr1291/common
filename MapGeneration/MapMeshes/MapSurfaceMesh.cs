@@ -8,6 +8,10 @@ namespace nv
 {
     public class MapSurfaceMesh : ScriptableObject
     {
+        public Material renderMat;
+
+        [HideInInspector]
+        public MeshRenderer meshRenderer;
         [HideInInspector]
         public MeshFilter meshFilter;
         [HideInInspector]
@@ -90,15 +94,32 @@ namespace nv
         [HideInInspector]
         Vector2[] simple_uvs;
 
+        public bool IsEqual(MapElement a, MapElement b)
+        {
+            return a.IsWall && b.IsWall;
+        }
+
+        Vector3 ToEdgePosX(Vector3 pos)
+        {
+            return pos + new Vector3(.5f, 0f, 0f);
+        }
+
+        Vector3 ToEdgePosY(Vector3 pos)
+        {
+            return pos + new Vector3(0f, 0f, .5f);
+        }
+
         public void Init(GameObject root, int chunkSize, MapWallMesh wall)
         {
             Resolution = chunkSize;
             Wall = wall;
-            root.GetOrAddComponentIfNull(ref meshFilter);
-            root.GetOrAddComponentIfNull(ref meshCollider);
+
+            meshRenderer = root.GetOrAddComponent<MeshRenderer>();
+            meshFilter = root.GetOrAddComponent<MeshFilter>();
+            meshCollider = root.GetOrAddComponent<MeshCollider>();
 
             meshFilter.mesh = mesh = new Mesh();
-            mesh.name = "Surface Mesh";
+            mesh.name = root.name;
             vertices = new List<Vector3>();
             triangles = new List<int>();
 
@@ -136,6 +157,8 @@ namespace nv
 
             if(update_collider)
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
+
+            meshRenderer.sharedMaterial = renderMat;
         }
 
         [SerializeField]
@@ -310,115 +333,124 @@ namespace nv
 
         public void FillFirstRowCache(ArrayGrid<MapElement> mesh_input)
         {
-            CacheFirstCorner(mesh_input[0, 0]);
+            CacheFirstCorner(mesh_input[0, 0], Vector2Int.zero);
             int i = 0;
             for(; i < Resolution - 1; i++)
             {
-                CacheNextEdgeAndCorner(i * 2, mesh_input[i], mesh_input[i + 1]);
+                CacheNextEdgeAndCorner(i * 2, mesh_input[i], mesh_input[i + 1], mesh_input.GetPositionFromIndex(i), mesh_input.GetPositionFromIndex(i + 1));
             }
             if(xNeighbor != null)
             {
                 Vector3 offsetx = new Vector3(Resolution, 0, 0);
-                CacheNextEdgeAndCornerWithOffset(i * 2, mesh_input[i], xNeighbor.SubMap[0], offsetx);
+                CacheNextEdgeAndCornerWithOffset(i * 2, mesh_input[i], xNeighbor.SubMap[0], offsetx, mesh_input.GetPositionFromIndex(i), xNeighbor.SubMap.GetPositionFromIndex(0));
             }
         }
 
-        private void CacheFirstCorner(MapElement a)
+        private void CacheFirstCorner(MapElement a, Vector2Int pos)
         {
-            //if(a != null && !a.Empty)
-            //{
-            //    rowCacheMax[0] = vertices.Count;
-            //    vertices.Add(a.wposition);
-            //    if(Wall != null)
-            //        Wall.CacheXEdge(WallIndex(0), a.wposition);
-            //}
+            if(a != null && a.IsWall)
+            {
+                rowCacheMax[0] = vertices.Count;
+                vertices.Add(new Vector3(pos.x,0f,pos.y));
+                if(Wall != null)
+                    Wall.CacheXEdge(WallIndex(0), new Vector3(pos.x, 0f, pos.y));
+            }
         }
 
-        private void CacheFirstCornerWithOffset(MapElement a, Vector3 offset)
+        private void CacheFirstCornerWithOffset(MapElement a, Vector3 offset, Vector2Int pos)
         {
-            //if(a != null && !a.Empty)
-            //{
-            //    rowCacheMax[0] = vertices.Count;
-            //    vertices.Add(a.wposition + offset);
-            //    if(Wall != null)
-            //        Wall.CacheXEdge(WallIndex(0), a.wposition + offset);
-            //}
+            if(a != null && a.IsWall)
+            {
+                Vector3 wpos = new Vector3(pos.x, 0f, pos.y);
+                rowCacheMax[0] = vertices.Count;
+                vertices.Add(wpos + offset);
+                if(Wall != null)
+                    Wall.CacheXEdge(WallIndex(0), wpos + offset);
+            }
         }
 
-        private void CacheNextEdgeAndCorner(int i, MapElement xMin, MapElement xMax)
+        private void CacheNextEdgeAndCorner(int i, MapElement xMin, MapElement xMax, Vector2Int minPos, Vector2Int maxPos)
         {
-            //if(!MapElement.CompareID(xMin, xMax))
-            //{
-            //    rowCacheMax[i + 1] = vertices.Count;
-            //    vertices.Add(xMin.wxEdgePosition);
-            //    if(Wall != null)
-            //        Wall.CacheXEdge(WallIndex(i), xMin.wxEdgePosition);
-            //}
-            //if(xMax != null && !xMax.Empty)
-            //{
-            //    rowCacheMax[i + 2] = vertices.Count;
-            //    vertices.Add(xMax.wposition);
-            //}
+            Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
+            Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
+            if(!IsEqual(xMin, xMax))
+            {
+                rowCacheMax[i + 1] = vertices.Count;
+                vertices.Add(ToEdgePosX(wposMin));
+                if(Wall != null)
+                    Wall.CacheXEdge(WallIndex(i), ToEdgePosX(wposMin));
+            }
+            if(xMax != null && xMax.IsWall)
+            {
+                rowCacheMax[i + 2] = vertices.Count;
+                vertices.Add(wposMax);
+            }
         }
 
-        private void CacheNextEdgeAndCornerWithOffset(int i, MapElement xMin, MapElement xMax, Vector3 offset)
+        private void CacheNextEdgeAndCornerWithOffset(int i, MapElement xMin, MapElement xMax, Vector3 offset, Vector2Int minPos, Vector2Int maxPos)
         {
-            //if(!MapElement.CompareID(xMin, xMax))
-            //{
-            //    rowCacheMax[i + 1] = vertices.Count;
-            //    vertices.Add(xMin.wxEdgePosition);
-            //    if(Wall != null)
-            //        Wall.CacheXEdge(WallIndex(i), xMin.wxEdgePosition);
-            //}
-            //if(xMax != null && !xMax.Empty)
-            //{
-            //    rowCacheMax[i + 2] = vertices.Count;
-            //    vertices.Add(xMax.wposition + offset);
-            //}
+            Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
+            Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
+            if(!IsEqual(xMin, xMax))
+            {
+                rowCacheMax[i + 1] = vertices.Count;
+                vertices.Add(ToEdgePosX(wposMin));
+                if(Wall != null)
+                    Wall.CacheXEdge(WallIndex(i), ToEdgePosX(wposMin));
+            }
+            if(xMax != null && xMax.IsWall)
+            {
+                rowCacheMax[i + 2] = vertices.Count;
+                vertices.Add(wposMax + offset);
+            }
         }
 
-        private void CacheNextEdgeAndCornerWithOffset(int i, MapElement xMin, MapElement xMax, Vector3 minOffset, Vector3 maxOffset)
+        private void CacheNextEdgeAndCornerWithOffset(int i, MapElement xMin, MapElement xMax, Vector3 minOffset, Vector3 maxOffset, Vector2Int minPos, Vector2Int maxPos)
         {
-            //if(!MapElement.CompareID(xMin, xMax))
-            //{
-            //    rowCacheMax[i + 1] = vertices.Count;
-            //    vertices.Add(xMin.wxEdgePosition + minOffset);
-            //    if(Wall != null)
-            //        Wall.CacheXEdge(WallIndex(i), xMin.wxEdgePosition + minOffset);
-            //}
-            //if(xMax != null && !xMax.Empty)
-            //{
-            //    rowCacheMax[i + 2] = vertices.Count;
-            //    vertices.Add(xMax.wposition + maxOffset);
-            //}
+            Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
+            Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
+            if(!IsEqual(xMin, xMax))
+            {
+                rowCacheMax[i + 1] = vertices.Count;
+                vertices.Add(ToEdgePosX(wposMin) + minOffset);
+                if(Wall != null)
+                    Wall.CacheXEdge(WallIndex(i), ToEdgePosX(wposMin) + minOffset);
+            }
+            if(xMax != null && xMax.IsWall)
+            {
+                rowCacheMax[i + 2] = vertices.Count;
+                vertices.Add(wposMax + maxOffset);
+            }
         }
 
-        private void CacheNextMiddleEdge(MapElement yMin, MapElement yMax)
+        private void CacheNextMiddleEdge(MapElement yMin, MapElement yMax, Vector2Int minPos, Vector2Int maxPos)
         {
-            //edgeCacheMin = edgeCacheMax;
-            //if(Wall != null)
-            //    Wall.PrepareCacheForNextCell();
-            //if(!MapElement.CompareID(yMin, yMax))
-            //{
-            //    edgeCacheMax = vertices.Count;
-            //    vertices.Add(yMin.wyEdgePosition);
-            //    if(Wall != null)
-            //        Wall.CacheYEdge(yMin.wyEdgePosition);
-            //}
+            Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
+            edgeCacheMin = edgeCacheMax;
+            if(Wall != null)
+                Wall.PrepareCacheForNextCell();
+            if(!IsEqual(yMin, yMax))
+            {
+                edgeCacheMax = vertices.Count;
+                vertices.Add(ToEdgePosY(wposMin));
+                if(Wall != null)
+                    Wall.CacheYEdge(ToEdgePosY(wposMin));
+            }
         }
 
-        private void CacheNextMiddleEdgeWithOffset(MapElement yMin, MapElement yMax, Vector3 offset)
+        private void CacheNextMiddleEdgeWithOffset(MapElement yMin, MapElement yMax, Vector3 offset, Vector2Int minPos, Vector2Int maxPos)
         {
-            //edgeCacheMin = edgeCacheMax;
-            //if(Wall != null)
-            //    Wall.PrepareCacheForNextCell();
-            //if(!MapElement.CompareID(yMin, yMax))
-            //{
-            //    edgeCacheMax = vertices.Count;
-            //    vertices.Add(yMin.wyEdgePosition + offset);
-            //    if(Wall != null)
-            //        Wall.CacheYEdge(yMin.wyEdgePosition + offset);
-            //}
+            Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
+            edgeCacheMin = edgeCacheMax;
+            if(Wall != null)
+                Wall.PrepareCacheForNextCell();
+            if(!IsEqual(yMin, yMax))
+            {
+                edgeCacheMax = vertices.Count;
+                vertices.Add(ToEdgePosY(wposMin) + offset);
+                if(Wall != null)
+                    Wall.CacheYEdge(ToEdgePosY(wposMin) + offset);
+            }
         }
 
         public void TriangulateRows(ArrayGrid<MapElement> mesh_input)
@@ -426,16 +458,16 @@ namespace nv
             for(int j = 0; j < mesh_input.ValidArea.size.y; ++j)
             {
                 SwapRowCaches();
-                CacheFirstCorner(mesh_input[0, j + 1]);
-                CacheNextMiddleEdge(mesh_input[0, j], mesh_input[0, j + 1]);
+                CacheFirstCorner(mesh_input[0, j + 1], new Vector2Int(0, j + 1));
+                CacheNextMiddleEdge(mesh_input[0, j], mesh_input[0, j + 1], new Vector2Int(0,j), new Vector2Int(0,j+1));
 
                 for(int i = 0; i < mesh_input.ValidArea.size.x; ++i)
                 {
                     int cacheIndex = i * 2;
 
-                    CacheNextEdgeAndCorner(cacheIndex, mesh_input[i, j + 1], mesh_input[i + 1, j + 1]);
+                    CacheNextEdgeAndCorner(cacheIndex, mesh_input[i, j + 1], mesh_input[i + 1, j + 1], new Vector2Int(i,j+1), new Vector2Int(i + 1, j + 1));
 
-                    CacheNextMiddleEdge(mesh_input[i + 1, j], mesh_input[i + 1, j + 1]);
+                    CacheNextMiddleEdge(mesh_input[i + 1, j], mesh_input[i + 1, j + 1], new Vector2Int(i + 1,j), new Vector2Int(i+1,j+1));
 
                     TriangulateCell(cacheIndex
                                    , mesh_input[i, j]
@@ -472,13 +504,13 @@ namespace nv
             MapElement tb = mesh_input[1, (int)mesh_input.ValidArea.size.y];
             MapElement tc = yNeighbor.SubMap[0, 0];
             MapElement td = yNeighbor.SubMap[1, 0];
-            //CacheFirstCornerWithOffset( tc, offset );
-            //CacheNextMiddleEdgeWithOffset( mesh_input[ (int)mesh_input.ValidArea.size.y * Resolution ], tc, offset );
-            CacheFirstCornerWithOffset(tc, offset);
-            CacheNextMiddleEdge(mesh_input[(int)mesh_input.ValidArea.size.y * Resolution], tc);
+            //-----CacheFirstCornerWithOffset( tc, offset );
+            //-----CacheNextMiddleEdgeWithOffset( mesh_input[ (int)mesh_input.ValidArea.size.y * Resolution ], tc, offset );
+            CacheFirstCornerWithOffset(tc, offset, new Vector2Int(0,0));
+            CacheNextMiddleEdge(mesh_input[(int)mesh_input.ValidArea.size.y * Resolution], tc, mesh_input.GetPositionFromIndex((int)mesh_input.ValidArea.size.y * Resolution), new Vector2Int(0,0));
 
-            //CacheFirstCornerWithOffset( yNeighbor.map.First[ 0, 0 ], offset );
-            //CacheNextMiddleEdgeWithOffset( yNeighbor.map.First[ 1, 0 ], yNeighbor.map.First[ 0, 0 ], offset );
+            //-----CacheFirstCornerWithOffset( yNeighbor.map.First[ 0, 0 ], offset );
+            //-----CacheNextMiddleEdgeWithOffset( yNeighbor.map.First[ 1, 0 ], yNeighbor.map.First[ 0, 0 ], offset );
 
             for(int i = 0; i < (int)mesh_input.ValidArea.size.y; ++i)
             {
@@ -489,11 +521,11 @@ namespace nv
 
                 int cacheIndex = i * 2;
 
-                CacheNextEdgeAndCornerWithOffset(cacheIndex, c, d, offset, offset);
-                CacheNextMiddleEdge(b, d);
+                CacheNextEdgeAndCornerWithOffset(cacheIndex, c, d, offset, offset, new Vector2Int(i,0), new Vector2Int(i+1,0));
+                CacheNextMiddleEdge(b, d, new Vector2Int(i+1, (int)mesh_input.ValidArea.size.y), new Vector2Int(i+1,0));
 
                 TriangulateCell(cacheIndex, a, b, c, d);
-                //TriangulateCellWithOffset( a, b, c, d, Vector3.zero, Vector3.zero, offset, offset);
+                //-----TriangulateCellWithOffset( a, b, c, d, Vector3.zero, Vector3.zero, offset, offset);
             }
 
             if(xyNeighbor != null)
@@ -508,10 +540,10 @@ namespace nv
 
                 int cacheIndex = ((int)mesh_input.ValidArea.size.y) * 2;
 
-                CacheNextEdgeAndCornerWithOffset(cacheIndex, cx, dx, offsetz, offsetx + offsetz);
-                CacheNextMiddleEdgeWithOffset(bx, dx, offsetx);
+                CacheNextEdgeAndCornerWithOffset(cacheIndex, cx, dx, offsetz, offsetx + offsetz, new Vector2Int((int)mesh_input.ValidArea.size.y,0), new Vector2Int(0,0));
+                CacheNextMiddleEdgeWithOffset(bx, dx, offsetx,new Vector2Int(0, (int)mesh_input.ValidArea.size.y), new Vector2Int(0,0));
 
-                //TriangulateCellWithOffset( ax, bx, cx, dx, Vector3.zero, offsetx, offsetz, offsetx + offsetz );
+                //-----TriangulateCellWithOffset( ax, bx, cx, dx, Vector3.zero, offsetx, offsetz, offsetx + offsetz );
                 TriangulateCell(cacheIndex, ax, bx, cx, dx);
             }
         }
@@ -527,29 +559,29 @@ namespace nv
 
             int cacheIndex = ((int)mesh_input.ValidArea.size.y) * 2;
 
-            CacheNextEdgeAndCornerWithOffset(cacheIndex, c, d, offset);
-            CacheNextMiddleEdgeWithOffset(b, d, offset);
+            CacheNextEdgeAndCornerWithOffset(cacheIndex, c, d, offset, new Vector2Int((int)mesh_input.ValidArea.size.x, row + 1), new Vector2Int(0,row+1));
+            CacheNextMiddleEdgeWithOffset(b, d, offset, new Vector2Int(0,row), new Vector2Int(0,row+1));
 
             TriangulateCell(cacheIndex, a, b, c, d);
-            //TriangulateCellWithOffset( a, b, c, d, Vector3.zero, offset, Vector3.zero, offset );
+            //-----TriangulateCellWithOffset( a, b, c, d, Vector3.zero, offset, Vector3.zero, offset );
         }
 
         int GetCellType(MapElement a, MapElement b, MapElement c, MapElement d)
         {
             int cellType = 0;
-            if(a != null && !a.IsWall)
+            if(a != null && a.IsWall)
             {
                 cellType |= 1;
             }
-            if(b != null && !b.IsWall)
+            if(b != null && b.IsWall)
             {
                 cellType |= 2;
             }
-            if(c != null && !c.IsWall)
+            if(c != null && c.IsWall)
             {
                 cellType |= 4;
             }
-            if(d != null && !d.IsWall)
+            if(d != null && d.IsWall)
             {
                 cellType |= 8;
             }
@@ -596,7 +628,7 @@ namespace nv
             }
             catch(Exception e)
             {
-                Dev.LogError("Exception: " + e.Message + string.Format(" :: Params height {0} ; vertx {1} ; vertices.Count {3} ", height, vertex, vertices.Count));
+                Dev.LogError("Exception: " + e.Message + string.Format(" :: Params height {0} ; vertx {1} ; vertices.Count {2} ", height, vertex, vertices.Count));
             }
         }
 
@@ -751,14 +783,6 @@ namespace nv
                     AddTriangle((rowCacheMin[i + 2]), (rowCacheMin[i + 1]), (edgeCacheMax));
                     AddTriangle((rowCacheMax[i]), (rowCacheMax[i + 1]), (edgeCacheMin));
 
-                    //SetVertexHeight( innerHeightCorner, rowCacheMin[ i + 2 ] );
-                    //SetVertexHeight( outerHeightCorner, rowCacheMin[ i + 1 ] );
-                    //SetVertexHeight( outerHeightCorner, edgeCacheMax );
-
-                    //SetVertexHeight( innerHeightCorner, rowCacheMax[ i ] );
-                    //SetVertexHeight( outerHeightCorner, rowCacheMax[ i + 1 ] );
-                    //SetVertexHeight( outerHeightCorner, edgeCacheMin );
-
                     if(Wall != null) Wall.AddABBD(WallIndex(i));
                     if(Wall != null) Wall.AddCDAC(WallIndex(i));
                     if(Wall != null) Wall.AddABAC(WallIndex(i));
@@ -767,14 +791,6 @@ namespace nv
                 case 9:
                     AddTriangle((rowCacheMin[i]), (edgeCacheMin), (rowCacheMin[i + 1]));
                     AddTriangle((rowCacheMax[i + 2]), (edgeCacheMax), (rowCacheMax[i + 1]));
-
-                    //SetVertexHeight( innerHeightCorner, rowCacheMin[ i ] );
-                    //SetVertexHeight( outerHeightCorner, edgeCacheMin );
-                    //SetVertexHeight( outerHeightCorner, rowCacheMin[ i + 1 ] );
-
-                    //SetVertexHeight( innerHeightCorner, rowCacheMax[ i + 2 ] );
-                    //SetVertexHeight( outerHeightCorner, edgeCacheMax );
-                    //SetVertexHeight( outerHeightCorner, rowCacheMax[ i + 1 ] );
 
                     if(Wall != null) Wall.AddACAB(WallIndex(i));
                     if(Wall != null) Wall.AddBDCD(WallIndex(i));

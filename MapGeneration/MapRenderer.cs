@@ -101,11 +101,12 @@ namespace nv
         void CreateChunk(Vector2Int chunkIndex)
         {
             MapMesh chunk = Instantiate(chunkDefinition) as MapMesh;
+            chunk.name = "Chunk " + chunks.Count + " " + chunkIndex;
             GameObject chunkRoot = new GameObject(chunk.name + " root");
-            chunkRoot.transform.parent = transform.parent;
-            chunk.name = "Chunk " + chunks.Count;
+            chunkRoot.transform.SetParent(transform);
             chunk.Init(mapData, chunkRoot, ChunkSize, chunkIndex, chunkScale);
             chunks.Add(chunk);
+            chunkViews.Add(chunkRoot);
 
 
             if(chunkIndex.x > 0)

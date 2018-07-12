@@ -12,6 +12,16 @@ namespace nv
         [SerializeField]
         RNG rng;
 
+        public bool useCurrentSeedOnAwake;
+
+        void Awake()
+        {
+            if(useCurrentSeedOnAwake)
+                rng.Reset(rng.Seed);
+            else
+                rng.Reset();
+        }
+
         public static new GameRNG Instance {
             get {
                 GameRNG gameRNG = GameSingleton<GameRNG>.Instance;

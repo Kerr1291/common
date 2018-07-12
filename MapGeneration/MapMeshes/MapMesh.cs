@@ -23,8 +23,26 @@ namespace nv
         [EditScriptable]
         public MapSurfaceMesh surfaceDefinition;
 
+        MapSurfaceMesh surfaceData;
+        MapSurfaceMesh SurfaceData
+        {
+            get
+            {
+                return surfaceData;
+            }
+        }
+
         [EditScriptable]
         public MapWallMesh wallDefinition;
+
+        MapWallMesh wallData;
+        MapWallMesh WallData
+        {
+            get
+            {
+                return wallData;
+            }
+        }
 
         ProcGenMap mapData;
 
@@ -37,11 +55,11 @@ namespace nv
         {
             get
             {
-                return surfaceDefinition.xNeighbor;
+                return SurfaceData.xNeighbor;
             }
             set
             {
-                surfaceDefinition.xNeighbor = value;
+                SurfaceData.xNeighbor = value;
             }
         }
 
@@ -49,11 +67,11 @@ namespace nv
         {
             get
             {
-                return surfaceDefinition.yNeighbor;
+                return SurfaceData.yNeighbor;
             }
             set
             {
-                surfaceDefinition.yNeighbor = value;
+                SurfaceData.yNeighbor = value;
             }
         }
 
@@ -61,11 +79,11 @@ namespace nv
         {
             get
             {
-                return surfaceDefinition.xyNeighbor;
+                return SurfaceData.xyNeighbor;
             }
             set
             {
-                surfaceDefinition.xyNeighbor = value;
+                SurfaceData.xyNeighbor = value;
             }
         }
 
@@ -109,28 +127,32 @@ namespace nv
 
             Vector2Int chunkPos = chunkIndex * ChunkSize;
             Vector3 worldChunkPos = new Vector3(chunkPos.x, 0f, chunkPos.y);
-            WorldLocation.localPosition = worldChunkPos;
 
             GameObject surfaceRoot = new GameObject("Surface Mesh " + ChunkIndex);
             GameObject wallRoot = new GameObject("Wall Mesh " + ChunkIndex);
 
             surfaceRoot.transform.SetParent(root.transform);
-            surfaceRoot.transform.SetParent(root.transform);
+            wallRoot.transform.SetParent(root.transform);
+
+            WorldLocation.localPosition = worldChunkPos;
+
+            surfaceData = Instantiate(surfaceDefinition) as MapSurfaceMesh;
+            wallData = Instantiate(wallDefinition) as MapWallMesh;
 
             //create the mesh components
-            wallDefinition.Init(wallRoot, ChunkSize);
-            surfaceDefinition.Init(surfaceRoot, ChunkSize, wallDefinition);
+            WallData.Init(wallRoot, ChunkSize);
+            SurfaceData.Init(surfaceRoot, ChunkSize, WallData);
         }
 
         public void GenerateMesh(bool generateCollisionMesh = true)
         {
-            surfaceDefinition.Clear();
+            SurfaceData.Clear();
 
-            surfaceDefinition.FillFirstRowCache(SubMap);
+            SurfaceData.FillFirstRowCache(SubMap);
 
-            surfaceDefinition.TriangulateRows(SubMap);
+            SurfaceData.TriangulateRows(SubMap);
 
-            surfaceDefinition.Apply(generateCollisionMesh);
+            SurfaceData.Apply(generateCollisionMesh);
         }
     }
 }

@@ -9,6 +9,10 @@ namespace nv
 
     public class MapWallMesh : ScriptableObject
     {
+        public Material renderMat;
+
+        [HideInInspector]
+        public MeshRenderer meshRenderer;
         [HideInInspector]
         public MeshFilter meshFilter;
         [HideInInspector]
@@ -67,12 +71,13 @@ namespace nv
         {
             Resolution = chunkSize;
 
-            root.GetOrAddComponentIfNull(ref meshFilter);
-            root.GetOrAddComponentIfNull(ref meshCollider);
+            meshRenderer = root.GetOrAddComponent<MeshRenderer>();
+            meshFilter = root.GetOrAddComponent<MeshFilter>();
+            meshCollider = root.GetOrAddComponent<MeshCollider>();
 
             meshFilter.mesh = mesh = new Mesh();
 
-            mesh.name = "Wall Mesh";
+            mesh.name = root.name;
             vertices = new List<Vector3>();
             triangles = new List<int>();
 
@@ -90,6 +95,9 @@ namespace nv
 
         public void Apply(bool update_collider = true)
         {
+            if(triangles.Count <= 0)
+                return;
+
             mesh.vertices = vertices.ToArray();
             CalculateNormals();
 
@@ -102,10 +110,15 @@ namespace nv
 
             if(update_collider)
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
+
+            meshRenderer.sharedMaterial = renderMat;
         }
 
         public void CalculateNormals()
         {
+            if(triangles.Count <= 0)
+                return;
+
             normals = new Vector3[vertices.Count];
 
             int t = 0;
