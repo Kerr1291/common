@@ -110,28 +110,11 @@ namespace nv
                 Vector2Int subCurrent = subGridIter.Current;
                 Vector2 scaledSubCurrent = new Vector2(subCurrent.x * scale.x, subCurrent.y * scale.y);
                 Vector2Int sourcePos = sourceAreaPos + Vector2Int.FloorToInt(scaledSubCurrent);
-
-                //Debug.Log("==");
-                //Debug.Log(subCurrent);
-                //Debug.Log(sourcePos);
-                //Debug.Log(scaledSubCurrent);
-                //Debug.Log(scale);
-                //Debug.Log(sourceAreaPos);
-                //Debug.Log(sourceAreaSize);
-                //Debug.Log(subGridSize);
+                
                 subGrid[subCurrent] = grid[sourcePos];
             }
 
             return subGrid;
         }
-
-
-        ////TODO: finish/fix this next - not done yet
-        //public MapElement GetScaledElement(Vector2Int subMapPosition, Vector2Int subElementPos, float resolution)
-        //{
-        //    Vector2 scaledPosition = new Vector2(subElementPos.x, subElementPos.y) / resolution;
-        //    Vector2Int realMapPosition = subMapPosition + Vector2Int.FloorToInt(scaledPosition);
-        //    return GeneratedMap[realMapPosition];
-        //}
     }
 }

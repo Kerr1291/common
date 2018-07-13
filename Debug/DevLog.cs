@@ -836,10 +836,23 @@ namespace nv
                 return GetVarNameHelper._cached_name[ uniqueId ];
             else
             {
-                System.IO.StreamReader file = new System.IO.StreamReader(fileName);
-                for( int i = 0; i < lineNumber - 1; i++ )
-                    file.ReadLine();
-                string varName = file.ReadLine().Split(new char[] { '(', ')' })[1];
+                string varName = obj.GetType().Name;
+                System.IO.StreamReader file = null;
+                try
+                {
+                    file = new System.IO.StreamReader(fileName);
+                    for(int i = 0; i < lineNumber - 1; i++)
+                        file.ReadLine();
+                    varName = file.ReadLine().Split(new char[] { '(', ')' })[1];
+                }
+                catch(Exception)
+                { }
+                finally
+                {
+                    if(file != null)
+                        file.Close();
+                }
+
                 GetVarNameHelper._cached_name.Add( uniqueId, varName );
                 return varName;
             }

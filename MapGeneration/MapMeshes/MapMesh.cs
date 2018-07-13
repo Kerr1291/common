@@ -4,155 +4,61 @@ using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
 
-//using Map = nv.ArrayGrid<nv.MapElement>;
-
 namespace nv
 {
-    public class MapMesh : ScriptableObject
+    //enables a hacky workaround to create a list of nicely editable scriptable objects
+    [System.Serializable]
+    public class MapMeshDefinition
     {
-        public GameObject RenderData
-        {
-            get; private set;
-        }
-
-        public Transform WorldLocation
-        {
-            get; private set;
-        }
-
         [EditScriptable]
         public MapSurfaceMesh surfaceDefinition;
+    }
 
-        MapSurfaceMesh surfaceData;
-        MapSurfaceMesh SurfaceData
+    public class MapMesh : ScriptableObject
+    {
+        public ArrayGrid<MapElement> MapData { get; private set; }
+
+        [EditScriptableList]
+        public List<MapMeshDefinition> surfaceDefinitions;
+        public List<MapSurfaceMesh> Surfaces { get; private set; }
+
+        [HideInInspector]
+        public MapMesh xNeighbor, yNeighbor, xyNeighbor;
+        
+        public void Init(ArrayGrid<MapElement> map, GameObject root, Vector2Int chunkSize, Vector2Int chunkIndex)
         {
-            get
-            {
-                return surfaceData;
-            }
-        }
-
-        [EditScriptable]
-        public MapWallMesh wallDefinition;
-
-        MapWallMesh wallData;
-        MapWallMesh WallData
-        {
-            get
-            {
-                return wallData;
-            }
-        }
-
-        ProcGenMap mapData;
-
-        public int ChunkSize
-        {
-            get; private set;
-        }
-
-        public MapMesh xNeighbor
-        {
-            get
-            {
-                return SurfaceData.xNeighbor;
-            }
-            set
-            {
-                SurfaceData.xNeighbor = value;
-            }
-        }
-
-        public MapMesh yNeighbor
-        {
-            get
-            {
-                return SurfaceData.yNeighbor;
-            }
-            set
-            {
-                SurfaceData.yNeighbor = value;
-            }
-        }
-
-        public MapMesh xyNeighbor
-        {
-            get
-            {
-                return SurfaceData.xyNeighbor;
-            }
-            set
-            {
-                SurfaceData.xyNeighbor = value;
-            }
-        }
-
-        public Vector2Int ChunkIndex
-        {
-            get; private set;
-        }
-
-        public float ChunkScale
-        {
-            get; private set;
-        }
-
-        ArrayGrid<MapElement> subMap;
-        public ArrayGrid<MapElement> SubMap
-        {
-            get
-            {
-                if(subMap == null)
-                {
-                    Vector2Int sourceAreaPos = ChunkIndex * ChunkSize; //TODO: add an offset for the "current position" on the map to render from
-                    Vector2 sourceAreaSize = new Vector2(ChunkSize, ChunkSize) * ChunkScale;
-                    Vector2Int chunkMapSize = new Vector2Int(ChunkSize, ChunkSize);
-
-                    Debug.Log("CI " + ChunkIndex);
-                    subMap = mapData.GeneratedMap.MapToSubGrid(sourceAreaPos, Vector2Int.FloorToInt(sourceAreaSize), chunkMapSize);
-                }
-                return subMap;
-            }
-        }
-
-        public void Init(ProcGenMap map, GameObject root, int chunkSize, Vector2Int chunkIndex, float chunkScale)
-        {
-            mapData = map;
-            ChunkScale = chunkScale;
-
-            //and finish this
-            ChunkSize = chunkSize;
-            ChunkIndex = chunkIndex;
-            WorldLocation = root.transform;
-
-            Vector2Int chunkPos = chunkIndex * ChunkSize;
+            MapData = map;
+            
+            GameObject mapMeshRoot = new GameObject("MapMesh " + chunkIndex);
+            mapMeshRoot.transform.SetParent(root.transform);
+            
+            Vector2Int chunkPos = chunkIndex * chunkSize;
             Vector3 worldChunkPos = new Vector3(chunkPos.x, 0f, chunkPos.y);
+            root.transform.localPosition = worldChunkPos;
 
-            GameObject surfaceRoot = new GameObject("Surface Mesh " + ChunkIndex);
-            GameObject wallRoot = new GameObject("Wall Mesh " + ChunkIndex);
+            //create all the surfaces
+            Surfaces = new List<MapSurfaceMesh>();
+            foreach(var def in surfaceDefinitions)
+            {
+                MapSurfaceMesh mapMesh = Instantiate(def.surfaceDefinition) as MapSurfaceMesh;
 
-            surfaceRoot.transform.SetParent(root.transform);
-            wallRoot.transform.SetParent(root.transform);
+                ////create the mesh components
+                mapMesh.Init(this, mapMeshRoot, chunkSize);
 
-            WorldLocation.localPosition = worldChunkPos;
-
-            surfaceData = Instantiate(surfaceDefinition) as MapSurfaceMesh;
-            wallData = Instantiate(wallDefinition) as MapWallMesh;
-
-            //create the mesh components
-            WallData.Init(wallRoot, ChunkSize);
-            SurfaceData.Init(surfaceRoot, ChunkSize, WallData);
+                Surfaces.Add(mapMesh);
+            }
         }
 
         public void GenerateMesh(bool generateCollisionMesh = true)
         {
-            SurfaceData.Clear();
-
-            SurfaceData.FillFirstRowCache(SubMap);
-
-            SurfaceData.TriangulateRows(SubMap);
-
-            SurfaceData.Apply(generateCollisionMesh);
+            //generate the meshes
+            foreach(var surface in Surfaces)
+            {
+                surface.Clear();
+                surface.FillFirstRowCache(MapData);
+                surface.TriangulateRows(MapData);
+                surface.Apply(generateCollisionMesh);
+            }
         }
     }
 }

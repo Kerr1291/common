@@ -30,5 +30,9 @@ namespace nv
 	public class EditScriptableAttribute : PropertyAttribute
 	{
 
-	}
+    }
+    public class EditScriptableListAttribute : EditScriptableAttribute
+    {
+
+    }
 }

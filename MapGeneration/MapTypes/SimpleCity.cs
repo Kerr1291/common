@@ -94,7 +94,7 @@ namespace nv
         {
             var openGroundSpaces = map.GetPositionsOfType(defaultFillElement);
             int spacesToFill = (int)(openGroundSpaces.Count * percentageOfGroundToFillWithTrees);
-            Debug.Log("trees = " + spacesToFill);
+            //Debug.Log("trees = " + spacesToFill);
             int abort = 0;
             for(int i = 0; i < spacesToFill; ++i)
             {
@@ -134,7 +134,7 @@ namespace nv
                     bool result = map.GetPositionOfRandomAreaOfType(defaultFillElement, newBuildingAreaSize, ref buildingPos);
                     if(result)
                     {
-                        Debug.Log("Creating a building at " + buildingPos + " of size " + roomSize);
+                        //Debug.Log("Creating a building at " + buildingPos + " of size " + roomSize);
                         GenerateBuildingRooms(map, buildingPos, roomSize);
                         //map.FillArea(new Rect(buildingPos, roomSize), defaultDoorElement);
                         //map.FillArea(new Rect(buildingPos, Vector2.one), defaultTreeElement);

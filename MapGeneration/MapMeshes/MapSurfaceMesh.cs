@@ -33,7 +33,47 @@ namespace nv
         public bool useUVMap = false;
 
         [HideInInspector]
-        public MapMesh xNeighbor, yNeighbor, xyNeighbor;
+        public MapMesh Owner { get; private set; }
+        
+        public MapMesh xNeighbor
+        {
+            get
+            {
+                return Owner.xNeighbor;
+            }
+            set
+            {
+                Owner.xNeighbor = value;
+            }
+        }
+
+        public MapMesh yNeighbor
+        {
+            get
+            {
+                return Owner.yNeighbor;
+            }
+            set
+            {
+                Owner.yNeighbor = value;
+            }
+        }
+
+        public MapMesh xyNeighbor
+        {
+            get
+            {
+                return Owner.xyNeighbor;
+            }
+            set
+            {
+                Owner.xyNeighbor = value;
+            }
+        }
+
+        [Tooltip("Defines properties this surface will have when generated")]
+        [EditScriptable]
+        public MapWallMesh wallDefinition;
 
         [SerializeField]
         [HideInInspector]
@@ -41,8 +81,7 @@ namespace nv
 
         public MapWallMesh Wall
         {
-            get { return wall; }
-            private set { wall = value; }
+            get; private set;
         }
 
         public int WallIndex(int i)
@@ -83,7 +122,7 @@ namespace nv
         [HideInInspector]
         int edgeCacheMax;
 
-        public int Resolution
+        public Vector2Int ChunkSize
         {
             get;
             private set;
@@ -94,9 +133,12 @@ namespace nv
         [HideInInspector]
         Vector2[] simple_uvs;
 
+        [EditScriptable]
+        public MapElementEvaluator elementEvaluator;
+
         public bool IsEqual(MapElement a, MapElement b)
         {
-            return a.IsWall && b.IsWall;
+            return elementEvaluator.IsMeshElement(a) && elementEvaluator.IsMeshElement(b);
         }
 
         Vector3 ToEdgePosX(Vector3 pos)
@@ -109,22 +151,31 @@ namespace nv
             return pos + new Vector3(0f, 0f, .5f);
         }
 
-        public void Init(GameObject root, int chunkSize, MapWallMesh wall)
+        public void Init(MapMesh owner, GameObject root, Vector2Int chunkSize)
         {
-            Resolution = chunkSize;
-            Wall = wall;
+            Owner = owner;
+            ChunkSize = chunkSize;
 
-            meshRenderer = root.GetOrAddComponent<MeshRenderer>();
-            meshFilter = root.GetOrAddComponent<MeshFilter>();
-            meshCollider = root.GetOrAddComponent<MeshCollider>();
+            if(wallDefinition != null)
+            {
+                Wall = Instantiate(wallDefinition) as MapWallMesh;
+                Wall.Init(root, ChunkSize);
+            }
+
+            GameObject surfaceRoot = new GameObject(name + " - Surface Mesh");
+            surfaceRoot.transform.SetParent(root.transform);
+
+            meshRenderer = surfaceRoot.GetOrAddComponent<MeshRenderer>();
+            meshFilter = surfaceRoot.GetOrAddComponent<MeshFilter>();
+            meshCollider = surfaceRoot.GetOrAddComponent<MeshCollider>();
 
             meshFilter.mesh = mesh = new Mesh();
-            mesh.name = root.name;
+            mesh.name = surfaceRoot.name;
             vertices = new List<Vector3>();
             triangles = new List<int>();
 
-            rowCacheMax = new int[Resolution * 2 + 1];
-            rowCacheMin = new int[Resolution * 2 + 1];
+            rowCacheMax = new int[ChunkSize.x * 2 + 1];
+            rowCacheMin = new int[ChunkSize.x * 2 + 1];
         }
 
         public void Clear()
@@ -290,7 +341,7 @@ namespace nv
             simple_uvs = new Vector2[vertices.Count];
             for(int i = 0; i < vertices.Count; ++i)
             {
-                simple_uvs[i] = new Vector2(vertices[i].x / Resolution, vertices[i].z / Resolution);
+                simple_uvs[i] = new Vector2(vertices[i].x / ChunkSize.x, vertices[i].z / ChunkSize.y);
             }
         }
 
@@ -335,20 +386,20 @@ namespace nv
         {
             CacheFirstCorner(mesh_input[0, 0], Vector2Int.zero);
             int i = 0;
-            for(; i < Resolution - 1; i++)
+            for(; i < ChunkSize.x - 1; i++)
             {
                 CacheNextEdgeAndCorner(i * 2, mesh_input[i], mesh_input[i + 1], mesh_input.GetPositionFromIndex(i), mesh_input.GetPositionFromIndex(i + 1));
             }
             if(xNeighbor != null)
             {
-                Vector3 offsetx = new Vector3(Resolution, 0, 0);
-                CacheNextEdgeAndCornerWithOffset(i * 2, mesh_input[i], xNeighbor.SubMap[0], offsetx, mesh_input.GetPositionFromIndex(i), xNeighbor.SubMap.GetPositionFromIndex(0));
+                Vector3 offsetx = new Vector3(ChunkSize.x, 0, 0);
+                CacheNextEdgeAndCornerWithOffset(i * 2, mesh_input[i], xNeighbor.MapData[0], offsetx, mesh_input.GetPositionFromIndex(i), xNeighbor.MapData.GetPositionFromIndex(0));
             }
         }
 
         private void CacheFirstCorner(MapElement a, Vector2Int pos)
         {
-            if(a != null && a.IsWall)
+            if(a != null && elementEvaluator.IsMeshElement(a))
             {
                 rowCacheMax[0] = vertices.Count;
                 vertices.Add(new Vector3(pos.x,0f,pos.y));
@@ -359,7 +410,7 @@ namespace nv
 
         private void CacheFirstCornerWithOffset(MapElement a, Vector3 offset, Vector2Int pos)
         {
-            if(a != null && a.IsWall)
+            if(a != null && elementEvaluator.IsMeshElement(a))
             {
                 Vector3 wpos = new Vector3(pos.x, 0f, pos.y);
                 rowCacheMax[0] = vertices.Count;
@@ -380,7 +431,7 @@ namespace nv
                 if(Wall != null)
                     Wall.CacheXEdge(WallIndex(i), ToEdgePosX(wposMin));
             }
-            if(xMax != null && xMax.IsWall)
+            if(xMax != null && elementEvaluator.IsMeshElement(xMax))
             {
                 rowCacheMax[i + 2] = vertices.Count;
                 vertices.Add(wposMax);
@@ -398,7 +449,7 @@ namespace nv
                 if(Wall != null)
                     Wall.CacheXEdge(WallIndex(i), ToEdgePosX(wposMin));
             }
-            if(xMax != null && xMax.IsWall)
+            if(xMax != null && elementEvaluator.IsMeshElement(xMax))
             {
                 rowCacheMax[i + 2] = vertices.Count;
                 vertices.Add(wposMax + offset);
@@ -416,7 +467,7 @@ namespace nv
                 if(Wall != null)
                     Wall.CacheXEdge(WallIndex(i), ToEdgePosX(wposMin) + minOffset);
             }
-            if(xMax != null && xMax.IsWall)
+            if(xMax != null && elementEvaluator.IsMeshElement(xMax))
             {
                 rowCacheMax[i + 2] = vertices.Count;
                 vertices.Add(wposMax + maxOffset);
@@ -497,17 +548,17 @@ namespace nv
 
         private void TriangulateGapRow(ArrayGrid<MapElement> mesh_input)
         {
-            Vector3 offset = new Vector3(0, 0, Resolution);
+            Vector3 offset = new Vector3(0, 0, ChunkSize.y);
 
             SwapRowCaches();
             MapElement ta = mesh_input[0, (int)mesh_input.ValidArea.size.y];
             MapElement tb = mesh_input[1, (int)mesh_input.ValidArea.size.y];
-            MapElement tc = yNeighbor.SubMap[0, 0];
-            MapElement td = yNeighbor.SubMap[1, 0];
+            MapElement tc = yNeighbor.MapData[0, 0];
+            MapElement td = yNeighbor.MapData[1, 0];
             //-----CacheFirstCornerWithOffset( tc, offset );
             //-----CacheNextMiddleEdgeWithOffset( mesh_input[ (int)mesh_input.ValidArea.size.y * Resolution ], tc, offset );
             CacheFirstCornerWithOffset(tc, offset, new Vector2Int(0,0));
-            CacheNextMiddleEdge(mesh_input[(int)mesh_input.ValidArea.size.y * Resolution], tc, mesh_input.GetPositionFromIndex((int)mesh_input.ValidArea.size.y * Resolution), new Vector2Int(0,0));
+            CacheNextMiddleEdge(mesh_input[(int)mesh_input.ValidArea.size.y * ChunkSize.y], tc, mesh_input.GetPositionFromIndex((int)mesh_input.ValidArea.size.y * ChunkSize.y), new Vector2Int(0,0));
 
             //-----CacheFirstCornerWithOffset( yNeighbor.map.First[ 0, 0 ], offset );
             //-----CacheNextMiddleEdgeWithOffset( yNeighbor.map.First[ 1, 0 ], yNeighbor.map.First[ 0, 0 ], offset );
@@ -516,8 +567,8 @@ namespace nv
             {
                 MapElement a = mesh_input[i, (int)mesh_input.ValidArea.size.y];
                 MapElement b = mesh_input[i + 1, (int)mesh_input.ValidArea.size.y];
-                MapElement c = yNeighbor.SubMap[i, 0];
-                MapElement d = yNeighbor.SubMap[i + 1, 0];
+                MapElement c = yNeighbor.MapData[i, 0];
+                MapElement d = yNeighbor.MapData[i + 1, 0];
 
                 int cacheIndex = i * 2;
 
@@ -531,12 +582,12 @@ namespace nv
             if(xyNeighbor != null)
             {
                 MapElement ax = mesh_input[(int)mesh_input.ValidArea.size.y, (int)mesh_input.ValidArea.size.y];
-                MapElement bx = xNeighbor.SubMap[0, (int)mesh_input.ValidArea.size.y];
-                MapElement cx = yNeighbor.SubMap[(int)mesh_input.ValidArea.size.y, 0];
-                MapElement dx = xyNeighbor.SubMap[0, 0];
+                MapElement bx = xNeighbor.MapData[0, (int)mesh_input.ValidArea.size.y];
+                MapElement cx = yNeighbor.MapData[(int)mesh_input.ValidArea.size.y, 0];
+                MapElement dx = xyNeighbor.MapData[0, 0];
 
-                Vector3 offsetx = new Vector3(Resolution, 0, 0);
-                Vector3 offsetz = new Vector3(0, 0, Resolution);
+                Vector3 offsetx = new Vector3(ChunkSize.x, 0, 0);
+                Vector3 offsetz = new Vector3(0, 0, ChunkSize.y);
 
                 int cacheIndex = ((int)mesh_input.ValidArea.size.y) * 2;
 
@@ -551,11 +602,11 @@ namespace nv
         private void TriangulateGapCell(ArrayGrid<MapElement> mesh_input, int row)
         {
             MapElement a = mesh_input[(int)mesh_input.ValidArea.size.x, row];
-            MapElement b = xNeighbor.SubMap[0, row];
+            MapElement b = xNeighbor.MapData[0, row];
             MapElement c = mesh_input[(int)mesh_input.ValidArea.size.x, row + 1];
-            MapElement d = xNeighbor.SubMap[0, row + 1];
+            MapElement d = xNeighbor.MapData[0, row + 1];
 
-            Vector3 offset = new Vector3(Resolution, 0, 0);
+            Vector3 offset = new Vector3(ChunkSize.x, 0, 0);
 
             int cacheIndex = ((int)mesh_input.ValidArea.size.y) * 2;
 
@@ -569,19 +620,19 @@ namespace nv
         int GetCellType(MapElement a, MapElement b, MapElement c, MapElement d)
         {
             int cellType = 0;
-            if(a != null && a.IsWall)
+            if(a != null && elementEvaluator.IsMeshElement(a))
             {
                 cellType |= 1;
             }
-            if(b != null && b.IsWall)
+            if(b != null && elementEvaluator.IsMeshElement(b))
             {
                 cellType |= 2;
             }
-            if(c != null && c.IsWall)
+            if(c != null && elementEvaluator.IsMeshElement(c))
             {
                 cellType |= 4;
             }
-            if(d != null && d.IsWall)
+            if(d != null && elementEvaluator.IsMeshElement(d))
             {
                 cellType |= 8;
             }

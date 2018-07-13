@@ -324,6 +324,27 @@ namespace nv
 			FindContextMenu();
 		}
 
+        bool propIsArray;
+        bool propArraySize;
+        bool propArrayData;
+        bool propArrayEdit;
+
+        bool IsInsideArray
+        {
+            get
+            {
+                return propIsArray && propArraySize && propArrayData;
+            }
+            set
+            {
+                propIsArray = value;
+                propArraySize = value;
+                propArrayData = value;
+            }
+        }
+
+        int propInsideArrayCount = 0;
+
 		protected void FindTargetProperties()
 		{
 			listIndex.Clear();
@@ -336,13 +357,13 @@ namespace nv
 			if (iterProp.NextVisible(true))
 			{
 				do
-				{
-					if (iterProp.isArray && iterProp.propertyType != SerializedPropertyType.String)
+                {
+                    if (iterProp.isArray && iterProp.propertyType != SerializedPropertyType.String)
 					{
 #if LIST_ALL_ARRAYS
 						bool canTurnToList = true
 #else
-						bool canTurnToList = iterProp.HasAttribute<ReorderableAttribute>();
+                        bool canTurnToList = iterProp.HasAttribute<ReorderableAttribute>();
 #endif
 						if (canTurnToList)
 						{
@@ -351,13 +372,38 @@ namespace nv
 						}
 					}
 
-					if (iterProp.propertyType == SerializedPropertyType.ObjectReference)
+                    if(propArraySize && iterProp.name == "data")
+                    {
+                        propArrayData = true;
+                    }
+
+                    if(propIsArray && iterProp.name == "size")
+                    {
+                        propArraySize = true;
+                        propInsideArrayCount = serializedObject.FindProperty(iterProp.propertyPath).intValue;
+                    }
+
+                    if(iterProp.isArray)
+                    {
+                        propIsArray = true;
+                        propArrayEdit = iterProp.HasAttribute<EditScriptableAttribute>();
+                    }
+
+                    //TODO: if we're in a list/array of EditScriptables, then pass that info to the items inside the array/list
+                    if (iterProp.propertyType == SerializedPropertyType.ObjectReference)
 					{
 						Type propType = iterProp.GetTypeReflection();
-						if (propType == null)
+
+                        if (propType == null && !(IsInsideArray && propArrayEdit))
 							continue;
 
-						bool isScriptable = propType.IsSubclassOf(typeScriptable);
+                        bool isScriptable = false;
+
+                        if(IsInsideArray && propArrayEdit)
+                            isScriptable = true;
+                        else
+                            isScriptable = propType.IsSubclassOf(typeScriptable);
+
 						if (isScriptable)
 						{
 #if EDIT_ALL_SCRIPTABLES
@@ -365,14 +411,24 @@ namespace nv
 #else
 							bool makeEditable = iterProp.HasAttribute<EditScriptableAttribute>();
 #endif
+                            if(IsInsideArray && propArrayEdit)
+                            {
+                                makeEditable = true;
+                                propInsideArrayCount--;
+                                if(propInsideArrayCount <= 0)
+                                {
+                                    IsInsideArray = false;
+                                    propArrayEdit = false;
+                                }
+                            }
 
-							if (makeEditable)
-							{
-								Editor scriptableEditor = null;
+                            if (makeEditable)
+                            {
+                                Editor scriptableEditor = null;
 								if (iterProp.objectReferenceValue != null)
-								{
+                                {
 #if UNITY_5_6_OR_NEWER
-									CreateCachedEditorWithContext(iterProp.objectReferenceValue,
+                                    CreateCachedEditorWithContext(iterProp.objectReferenceValue,
 																serializedObject.targetObject, null,
 																ref scriptableEditor);
 #else
@@ -627,16 +683,16 @@ namespace nv
 		}
 
 		protected void IterateDrawProperty(SerializedProperty property, Func<IterControl> filter = null)
-		{
-			if (property.NextVisible(true))
-			{
-				// Remember depth iteration started from
-				int depth = property.Copy().depth;
-				do
-				{
-					// If goes deeper than the iteration depth, get out
-					if (property.depth != depth)
-						break;
+        {
+            if (property.NextVisible(true))
+            {
+                // Remember depth iteration started from
+                int depth = property.Copy().depth;
+                do
+                {
+                    // If goes deeper than the iteration depth, get out
+      //              if (property.depth != depth)
+						//continue;
 					if (isSubEditor && property.name.Equals("m_Script"))
 						continue;
 
@@ -649,17 +705,27 @@ namespace nv
 							continue;
 					}
 
-					DrawPropertySortableArray(property);
-				} while (property.NextVisible(false));
-			}
+                    //TODO: make it so this hack isn't needed to work with scriptable lists...
+                    if(!property.HasAttribute<EditScriptableListAttribute>() && (property.name == "size" || property.depth != 1))
+                        DrawPropertySortableArray(property);
+                } while(property.NextVisible(true));
+            }
 		}
+
+        //TODO: fix this hack so it doesn't reference the application controls, but instead an editor scriptable object....
+        Dictionary<string, int> typeSelection
+        {
+            get
+            {
+                return ApplicationControls.Instance.typeSelection;
+            }
+        }
 
         /// <summary>
         /// Draw a SerializedProperty as a ReorderableList if it was found during
         /// initialization, otherwise use EditorGUILayout.PropertyField
         /// </summary>
         /// <param name="property"></param>
-        int typeSelection = 0;
         protected void DrawPropertySortableArray(SerializedProperty property)
 		{
 			// Try to get the sortable list this property belongs to
@@ -715,7 +781,10 @@ namespace nv
 
                                 if(subclasses.Count > 0)
                                 {
-                                    typeSelection = EditorGUILayout.Popup(typeSelection, subclasses.Select(x => x.Name).ToArray());
+                                    if(!typeSelection.ContainsKey(property.propertyPath))
+                                        typeSelection.Add(property.propertyPath, 0);
+                                    typeSelection[property.propertyPath] = EditorGUILayout.Popup(typeSelection[property.propertyPath], subclasses.Select(x => x.Name).ToArray());
+                                    //Dev.LogVar(typeSelection[property.propertyPath]);
                                 }
 
                                 if(hasSpace) GUILayout.Space(10);
@@ -729,7 +798,7 @@ namespace nv
 						Type propType = property.GetTypeReflection();
                         if(subclasses.Count > 0)
                         {
-                            propType = subclasses[typeSelection];
+                            propType = subclasses[typeSelection[property.propertyPath]];
                         }
 
 						var createdAsset = CreateAssetWithSavePrompt(propType, "Assets");

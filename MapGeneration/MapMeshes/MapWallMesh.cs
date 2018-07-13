@@ -57,7 +57,7 @@ namespace nv
         [HideInInspector]
         int yEdgeMax;
 
-        public int Resolution
+        public Vector2Int ChunkSize
         {
             get;
             private set;
@@ -67,22 +67,25 @@ namespace nv
         [HideInInspector]
         List<Vector2> simple_uvs;
 
-        public void Init(GameObject root, int chunkSize)
+        public void Init(GameObject root, Vector2Int chunkSize)
         {
-            Resolution = chunkSize;
+            ChunkSize = chunkSize;
 
-            meshRenderer = root.GetOrAddComponent<MeshRenderer>();
-            meshFilter = root.GetOrAddComponent<MeshFilter>();
-            meshCollider = root.GetOrAddComponent<MeshCollider>();
+            GameObject wallRoot = new GameObject(name + " - Wall Mesh");
+            wallRoot.transform.SetParent(root.transform);
+
+            meshRenderer = wallRoot.GetOrAddComponent<MeshRenderer>();
+            meshFilter = wallRoot.GetOrAddComponent<MeshFilter>();
+            meshCollider = wallRoot.GetOrAddComponent<MeshCollider>();
 
             meshFilter.mesh = mesh = new Mesh();
 
-            mesh.name = root.name;
+            mesh.name = wallRoot.name;
             vertices = new List<Vector3>();
             triangles = new List<int>();
 
-            xEdgesMin = new int[Resolution];
-            xEdgesMax = new int[Resolution];
+            xEdgesMin = new int[ChunkSize.x];
+            xEdgesMax = new int[ChunkSize.x];
         }
 
         public void Clear()
