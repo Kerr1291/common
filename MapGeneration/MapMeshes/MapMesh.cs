@@ -24,17 +24,19 @@ namespace nv
 
         [HideInInspector]
         public MapMesh xNeighbor, yNeighbor, xyNeighbor;
+
+        public GameObject mapMeshRoot;
+        public Vector3 worldPos;
         
         public void Init(ArrayGrid<MapElement> map, GameObject root, Vector2Int chunkSize, Vector2Int chunkIndex)
         {
             MapData = map;
-            
-            GameObject mapMeshRoot = new GameObject("MapMesh " + chunkIndex);
+
+            mapMeshRoot = new GameObject("MapMesh " + chunkIndex);
             mapMeshRoot.transform.SetParent(root.transform);
             
             Vector2Int chunkPos = chunkIndex * chunkSize;
-            Vector3 worldChunkPos = new Vector3(chunkPos.x, 0f, chunkPos.y);
-            root.transform.localPosition = worldChunkPos;
+            worldPos = new Vector3(chunkPos.x, 0f, chunkPos.y);
 
             //create all the surfaces
             Surfaces = new List<MapSurfaceMesh>();
@@ -59,6 +61,8 @@ namespace nv
                 surface.TriangulateRows(MapData);
                 surface.Apply(generateCollisionMesh);
             }
+
+            mapMeshRoot.transform.localPosition = worldPos;
         }
     }
 }

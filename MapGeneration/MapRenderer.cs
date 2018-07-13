@@ -212,11 +212,11 @@ namespace nv
         ArrayGrid<MapElement> CreateChunkMap(Vector2Int chunkIndex)
         {
             ArrayGrid<MapElement> chunkMap;
-            Vector2Int sourceAreaPos = new Vector2Int(chunkIndex.x * ChunkSize.x, chunkIndex.y * ChunkSize.y);
-            Vector2 sourceAreaSize = new Vector2(ChunkSize.x, ChunkSize.y);
+            Vector2Int sourceMapSize = new Vector2Int(ChunkSize.x / mapScale.x, ChunkSize.y / mapScale.y);
+            Vector2Int sourceAreaPos = new Vector2Int(chunkIndex.x * sourceMapSize.x, chunkIndex.y * sourceMapSize.y);
             Vector2Int chunkMapSize = new Vector2Int(ChunkSize.x, ChunkSize.y);
 
-            chunkMap = mapData.GeneratedMap.MapToSubGrid(sourceAreaPos, Vector2Int.FloorToInt(sourceAreaSize), chunkMapSize);
+            chunkMap = mapData.GeneratedMap.MapToSubGrid(sourceAreaPos, sourceMapSize, chunkMapSize);
             return chunkMap;
         }
     }
