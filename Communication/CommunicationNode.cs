@@ -18,6 +18,7 @@ namespace nv
     [AttributeUsage(AttributeTargets.Method)]
     public class CommunicationCallback : Attribute
     {
+        /// Used to add additional requirements to handlers via the CommunicationCallback attribute.
         public Tags tags;
 
         /// <summary>
@@ -824,81 +825,6 @@ namespace nv
                 name = (thing as UnityEngine.Object).name;
 #endif
             return name;
-        }
-    }
-
-    /// <summary>
-    /// Used to add additional requirements to handlers via the CommunicationCallback attribute.
-    /// </summary>
-    public struct Tags
-    {
-        public enum Matching
-        {
-            Any
-            , All
-        };
-
-        public string[] tags { get; private set; }
-        public Matching matching;
-
-        public Tags(params string[] tags)
-        {
-            if(tags == null)
-                this.tags = new string[0];
-            else
-                this.tags = tags;
-            this.matching = Matching.Any;
-        }
-
-        public Tags(Matching matching, params string[] tags)
-        {
-            if(tags == null)
-                this.tags = new string[0];
-            else
-                this.tags = tags;
-            this.matching = matching;
-        }
-
-        public static implicit operator string[] (Tags t)
-        {
-            return t.tags;
-        }
-
-        public static implicit operator Tags(string[] tags)
-        {
-            if(tags == null)
-                return new Tags();
-            return new Tags(tags);
-        }
-
-        public int Count
-        {
-            get
-            {
-                return tags == null ? 0 : tags.Length;
-            }
-        }
-
-        public bool Contains(string s)
-        {
-            if(tags == null)
-            {
-                return string.IsNullOrEmpty(s);
-            }
-            else
-            {
-                return tags.Contains(s);
-            }
-        }
-
-        public override string ToString()
-        {
-            if(tags == null || tags.Length <= 0)
-                return string.Empty;
-
-            string result = "";
-            tags.Select(x => { result += x + ", "; return x; });
-            return matching + " " + result.TrimEnd(',', ' ');
         }
     }
 }

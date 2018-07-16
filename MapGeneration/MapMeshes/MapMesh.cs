@@ -25,7 +25,10 @@ namespace nv
         [HideInInspector]
         public MapMesh xNeighbor, yNeighbor, xyNeighbor;
 
+        [HideInInspector]
         public GameObject mapMeshRoot;
+
+        [HideInInspector]
         public Vector3 worldPos;
         
         public void Init(ArrayGrid<MapElement> map, GameObject root, Vector2Int chunkSize, Vector2Int chunkIndex)

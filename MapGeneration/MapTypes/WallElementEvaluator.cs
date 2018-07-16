@@ -18,7 +18,7 @@ namespace nv
 
         bool EvalMeshElement(MapElement mapElement)
         {
-            return mapElement.IsWall;
+            return evalTags.Matches(mapElement.tags);
         }
     }
 }

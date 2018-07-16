@@ -227,8 +227,11 @@ namespace nv
 			if (enumerable == null)
 				return null;
 			var enm = enumerable.GetEnumerator();
+            bool result = false;
 			while (index-- >= 0)
-				enm.MoveNext();
+				result = enm.MoveNext();
+            if(!result)
+                return null;
 			return enm.Current;
 		}
 

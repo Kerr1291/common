@@ -196,9 +196,20 @@ namespace nv
             CalculateNormals();
             CalculateSimpleUVs();
 
-            mesh.vertices = vertices.ToArray();
-            mesh.normals = normals;
-            mesh.triangles = triangles.ToArray();
+            if(vertices.Count > 0)
+                mesh.vertices = vertices.ToArray();
+            else
+                mesh.vertices = null;
+
+            if(normals.Length > 0)
+                mesh.normals = normals;
+            else
+                mesh.normals = null;
+
+            if(triangles.Count > 0)
+                mesh.triangles = triangles.ToArray();
+            else
+                mesh.triangles = null;
 
             if(null != simple_uvs && simple_uvs.Length == mesh.vertices.Length)
                 mesh.uv = simple_uvs;
@@ -338,6 +349,9 @@ namespace nv
             if(useUVMap)
                 return;
 
+            if(vertices.Count <= 0)
+                return;
+
             simple_uvs = new Vector2[vertices.Count];
             for(int i = 0; i < vertices.Count; ++i)
             {
@@ -347,6 +361,12 @@ namespace nv
 
         void CalculateNormals()
         {
+            if(vertices.Count <= 0)
+                return;
+
+            if(triangles.Count <= 0)
+                return;
+
             normals = new Vector3[vertices.Count];
 
             int t = 0;

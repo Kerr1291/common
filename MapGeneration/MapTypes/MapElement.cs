@@ -5,11 +5,9 @@ using UnityEngine;
 
 namespace nv
 {
-    public class MapElement : ScriptableObject, IEqualityComparer
+    public class MapElement : ScriptableObject
     {
-        //TODO:
-        //public Color id; 
-        public bool IsWall = false;
+        public Tags tags;
 
         void OnEnable()
         { 
@@ -18,16 +16,6 @@ namespace nv
         }
 
         public Color debugColor;
-
-        public new bool Equals(object x, object y)
-        {
-            return (x as MapElement).name == (y as MapElement).name;
-        }
-
-        public int GetHashCode(object obj)
-        {
-            return (obj as MapElement).name.GetHashCode();
-        }
     }
 }
 
