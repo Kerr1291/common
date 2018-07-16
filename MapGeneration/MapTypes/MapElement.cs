@@ -8,6 +8,8 @@ namespace nv
     public class MapElement : ScriptableObject
     {
         public Tags tags;
+        public Mesh objectMesh;
+        public Material elementMat;
 
         void OnEnable()
         { 

@@ -193,13 +193,41 @@ namespace nv
             //only need to calculate nearby vertices if we're going to be using mesh smoothing
             if(smoothMesh)
                 CalculateNeighbors();
+
+
+            var verts = new List<Vector3>();
+            var norms = new List<Vector3>();
+            var tris = new List<List<int>>();
+            var uvs = new List<Vector2>();
+
+            var mapObjects = CalculateObjectTypes();
+
+            int meshCount = mapObjects.Count + 1;
+            meshRenderer.sharedMaterials = new Material[meshCount];
+            meshRenderer.sharedMaterial = renderMat;
+
+            mesh.subMeshCount = meshCount;
+
+            CalculateObjectSubMeshes(mapObjects, vertices.Count, ref verts, ref norms, ref uvs, ref tris);
+
+            vertices.AddRange(verts);
+
             CalculateNormals();
             CalculateSimpleUVs();
+            
+
+            //var normTemp = normals.ToList();
+            //normTemp.AddRange(norms);
+            //normals = normTemp.ToArray();
+
+            //var uvTemp = simple_uvs.ToList();
+            //uvTemp.AddRange(uvs);
+            //simple_uvs = uvTemp.ToArray();
 
             if(vertices.Count > 0)
                 mesh.vertices = vertices.ToArray();
             else
-                mesh.vertices = null;
+                mesh.vertices = null;            
 
             if(normals.Length > 0)
                 mesh.normals = normals;
@@ -207,9 +235,13 @@ namespace nv
                 mesh.normals = null;
 
             if(triangles.Count > 0)
-                mesh.triangles = triangles.ToArray();
+                mesh.SetTriangles(triangles.ToArray(),0);
             else
-                mesh.triangles = null;
+                mesh.SetTriangles(new int[0],0);
+
+            //TODO: figure out why the triangles aren't assigning properly?
+            for(int i = 0; i < tris.Count; ++i)
+                mesh.SetTriangles(tris[i], i+1);
 
             if(null != simple_uvs && simple_uvs.Length == mesh.vertices.Length)
                 mesh.uv = simple_uvs;
@@ -220,7 +252,65 @@ namespace nv
             if(update_collider)
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
 
-            meshRenderer.sharedMaterial = renderMat;
+            //if(meshRenderer.materials.Length == 1)
+            //{
+            //    meshRenderer.sharedMaterial = renderMat;
+            //}
+            //else
+            //{
+            //    meshRenderer.sharedMaterials[0] = renderMat;
+            //}
+
+            //TODO: figure out what's not working with these mats
+            int k = 1;
+            foreach(var mapObj in mapObjects)
+            {
+                meshRenderer.materials[k] = elementEvaluator.ObjectMaterialElement(mapObj.Value);
+                ++k;
+            }
+
+
+            //meshRenderer.sharedMaterial = renderMat;
+        }
+
+        void CalculateObjectSubMeshes(Dictionary<string, MapElement> mapObjects, int vertexCount, ref List<Vector3> verts, ref List<Vector3> norms, ref List<Vector2> uvs, ref List<List<int>> subMeshTris)
+        {
+            verts = new List<Vector3>();
+            norms = new List<Vector3>();
+            uvs = new List<Vector2>();
+            
+            foreach(var mapObj in mapObjects)
+            {
+                var elements = Owner.MapData.GetPositionsOfType(mapObj.Value);
+                List<int> tris = new List<int>();
+
+                foreach(Vector2Int pos in elements)
+                {
+                    Vector3 wPos = new Vector3(pos.x, innerHeight, pos.y) + Owner.worldPos;
+
+                    Mesh objMesh = elementEvaluator.ObjectMeshElement(mapObj.Value);
+                    int offset = verts.Count + vertexCount;
+                    verts.AddRange(objMesh.vertices.Select(x => x + wPos).ToList());
+                    norms.AddRange(objMesh.normals);
+                    tris.AddRange(objMesh.triangles.Select(x => x + offset).ToList());
+                    uvs.AddRange(objMesh.uv);
+                }
+
+                subMeshTris.Add(tris);
+            }
+        }
+
+        Dictionary<string, MapElement> CalculateObjectTypes()
+        {
+            Dictionary<string, MapElement> mapObjects = new Dictionary<string, MapElement>();
+            for(int i = 0; i < Owner.MapData.Count; ++i)
+            {
+                if(elementEvaluator.IsObjectMeshElement(Owner.MapData[i]) && !mapObjects.ContainsKey(Owner.MapData[i].tags.ToString()))
+                {
+                    mapObjects.Add(Owner.MapData[i].tags.ToString(), Owner.MapData[i]);
+                }
+            }
+            return mapObjects;
         }
 
         [SerializeField]

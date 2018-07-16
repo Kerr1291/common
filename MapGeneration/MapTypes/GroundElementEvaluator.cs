@@ -8,17 +8,5 @@ namespace nv
 {
     public class GroundElementEvaluator : MapElementEvaluator
     {
-        public override Func<MapElement, bool> IsMeshElement
-        {
-            get
-            {
-                return EvalMeshElement;
-            }
-        }
-
-        bool EvalMeshElement(MapElement mapElement)
-        {
-            return evalTags.Matches(mapElement.tags);
-        }
     }
 }
