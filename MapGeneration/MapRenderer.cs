@@ -190,7 +190,7 @@ namespace nv
             chunk.name = "Chunk " + chunks.Count + " " + chunkIndex;
             GameObject chunkRoot = new GameObject(chunk.name + " root");
             chunkRoot.transform.SetParent(transform);
-            chunk.Init(CreateChunkMap(chunkIndex), chunkRoot, ChunkSize, chunkIndex);
+            chunk.Init(CreateChunkMap(chunkIndex), chunkRoot, ChunkSize, chunkIndex, mapScale);
             chunks.Add(chunk);
             chunkViews.Add(chunkRoot);
 

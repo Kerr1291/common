@@ -11,6 +11,10 @@ namespace nv
         public Mesh objectMesh;
         public Material elementMat;
 
+        public Vector3 objectMeshOffset;
+        public Vector3 meshRotation;
+        public float meshScale = 100;
+
         void OnEnable()
         { 
             if(debugColor == default(Color))

@@ -701,6 +701,19 @@ namespace nv
             #endregion
         }
 
+        public static void MakeSphere(out List<Vector3> vertices, out List<Vector3> normals, out List<int> triangles, out List<Vector2> uvs, float radius = 1f, int nbLong = 24, int nbLat = 16)
+        {
+            Vector3[] verts;
+            Vector3[] norms;
+            int[] tris = null;
+            Vector2[] _uvs;
+            MakeSphere(out verts, out norms, out tris, out _uvs, radius, nbLong, nbLat);
+            vertices = new List<Vector3>(verts);
+            normals = new List<Vector3>(norms);
+            triangles = new List<int>(tris);
+            uvs = new List<Vector2>(_uvs);
+        }
+
         public static void MakeSphere(out Vector3[] vertices, out Vector3[] normals, out int[] triangles, out Vector2[] uvs, float radius = 1f, int nbLong = 24, int nbLat = 16)
         {
             #region Vertices

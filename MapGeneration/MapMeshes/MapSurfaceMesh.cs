@@ -128,6 +128,7 @@ namespace nv
             private set;
         }
 
+        public Bounds mapBounds;
 
         [SerializeField]
         [HideInInspector]
@@ -176,53 +177,45 @@ namespace nv
 
             rowCacheMax = new int[ChunkSize.x * 2 + 1];
             rowCacheMin = new int[ChunkSize.x * 2 + 1];
+
+            mapBounds = new Bounds();
+            mapBounds.SetMinMax(Owner.worldPos, new Vector3(ChunkSize.x, innerHeight + 100f, ChunkSize.y));
         }
 
         public void Clear()
         {
+            if(objectRenderers.Count > 0)
+            {
+                foreach(var objRenderer in objectRenderers)
+                {
+                    objRenderer.Stop();
+                    objRenderer.FreeMemory();
+                }
+                objectRenderers.Clear();
+            }
+
             vertices.Clear();
             triangles.Clear();
-            mesh.Clear();
+
+            if(mesh != null)
+                mesh.Clear();
 
             if(Wall != null)
                 Wall.Clear();
         }
+
+        List<MapObjectRenderer> objectRenderers = new List<MapObjectRenderer>();
 
         public void Apply(bool update_collider = true)
         {
             //only need to calculate nearby vertices if we're going to be using mesh smoothing
             if(smoothMesh)
                 CalculateNeighbors();
-
-
-            var verts = new List<Vector3>();
-            var norms = new List<Vector3>();
-            var tris = new List<List<int>>();
-            var uvs = new List<Vector2>();
-
-            var mapObjects = CalculateObjectTypes();
-
-            int meshCount = mapObjects.Count + 1;
-            meshRenderer.sharedMaterials = new Material[meshCount];
-            meshRenderer.sharedMaterial = renderMat;
-
-            mesh.subMeshCount = meshCount;
-
-            CalculateObjectSubMeshes(mapObjects, vertices.Count, ref verts, ref norms, ref uvs, ref tris);
-
-            vertices.AddRange(verts);
-
+            
+            CreateObjectRenderers();
+                        
             CalculateNormals();
             CalculateSimpleUVs();
-            
-
-            //var normTemp = normals.ToList();
-            //normTemp.AddRange(norms);
-            //normals = normTemp.ToArray();
-
-            //var uvTemp = simple_uvs.ToList();
-            //uvTemp.AddRange(uvs);
-            //simple_uvs = uvTemp.ToArray();
 
             if(vertices.Count > 0)
                 mesh.vertices = vertices.ToArray();
@@ -239,10 +232,6 @@ namespace nv
             else
                 mesh.SetTriangles(new int[0],0);
 
-            //TODO: figure out why the triangles aren't assigning properly?
-            for(int i = 0; i < tris.Count; ++i)
-                mesh.SetTriangles(tris[i], i+1);
-
             if(null != simple_uvs && simple_uvs.Length == mesh.vertices.Length)
                 mesh.uv = simple_uvs;
 
@@ -251,57 +240,23 @@ namespace nv
 
             if(update_collider)
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
-
-            //if(meshRenderer.materials.Length == 1)
-            //{
-            //    meshRenderer.sharedMaterial = renderMat;
-            //}
-            //else
-            //{
-            //    meshRenderer.sharedMaterials[0] = renderMat;
-            //}
-
-            //TODO: figure out what's not working with these mats
-            int k = 1;
-            foreach(var mapObj in mapObjects)
-            {
-                meshRenderer.materials[k] = elementEvaluator.ObjectMaterialElement(mapObj.Value);
-                ++k;
-            }
-
-
-            //meshRenderer.sharedMaterial = renderMat;
-        }
-
-        void CalculateObjectSubMeshes(Dictionary<string, MapElement> mapObjects, int vertexCount, ref List<Vector3> verts, ref List<Vector3> norms, ref List<Vector2> uvs, ref List<List<int>> subMeshTris)
-        {
-            verts = new List<Vector3>();
-            norms = new List<Vector3>();
-            uvs = new List<Vector2>();
             
-            foreach(var mapObj in mapObjects)
-            {
-                var elements = Owner.MapData.GetPositionsOfType(mapObj.Value);
-                List<int> tris = new List<int>();
-
-                foreach(Vector2Int pos in elements)
-                {
-                    Vector3 wPos = new Vector3(pos.x, innerHeight, pos.y) + Owner.worldPos;
-
-                    Mesh objMesh = elementEvaluator.ObjectMeshElement(mapObj.Value);
-                    int offset = verts.Count + vertexCount;
-                    verts.AddRange(objMesh.vertices.Select(x => x + wPos).ToList());
-                    norms.AddRange(objMesh.normals);
-                    tris.AddRange(objMesh.triangles.Select(x => x + offset).ToList());
-                    uvs.AddRange(objMesh.uv);
-                }
-
-                subMeshTris.Add(tris);
-            }
+            meshRenderer.sharedMaterial = renderMat;
         }
 
-        Dictionary<string, MapElement> CalculateObjectTypes()
+        void CreateObjectRenderers()
         {
+            if(objectRenderers.Count > 0)
+            {
+                foreach(var objRenderer in objectRenderers)
+                {
+                    objRenderer.Stop();
+                    objRenderer.FreeMemory();
+                }
+                objectRenderers.Clear();
+            }
+
+            //calculate the objects to render
             Dictionary<string, MapElement> mapObjects = new Dictionary<string, MapElement>();
             for(int i = 0; i < Owner.MapData.Count; ++i)
             {
@@ -310,7 +265,35 @@ namespace nv
                     mapObjects.Add(Owner.MapData[i].tags.ToString(), Owner.MapData[i]);
                 }
             }
-            return mapObjects;
+
+            foreach(var mapObj in mapObjects)
+            {
+                var positions = Owner.MapData.GetPositionsOfType(mapObj.Value);
+                Mesh objMesh = elementEvaluator.ObjectMeshElement(mapObj.Value);
+                Material objMat = elementEvaluator.ObjectMaterialElement(mapObj.Value);
+
+                MapObjectRenderer mpr = new MapObjectRenderer(objMesh, objMat, 0);
+                mpr.boundingVolume = mapBounds;
+
+
+                Vector3 meshPivotOffset = mapObj.Value.objectMeshOffset;
+
+                List<Vector3> worldPositions = positions.Select(x => (new Vector3(x.x * Owner.mapScale.x, 0f, x.y * Owner.mapScale.y)) + Owner.worldPos + meshPivotOffset).ToList();
+
+                Quaternion meshRot = Quaternion.Euler(mapObj.Value.meshRotation);
+
+                List<Vector4> rotations = positions.Select(x => new Vector4(meshRot.x, meshRot.y, meshRot.z, meshRot.w)).ToList();
+
+                List<float> scales = positions.Select(x => mapObj.Value.meshScale).ToList();
+
+                mpr.SetRenderData(worldPositions, scales, rotations);
+                mpr.Start();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            Clear();
         }
 
         [SerializeField]

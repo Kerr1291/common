@@ -92,7 +92,8 @@ namespace nv
         {
             vertices.Clear();
             triangles.Clear();
-            mesh.Clear();
+            if(mesh != null)
+                mesh.Clear();
             simple_uvs = new List<Vector2>();
         }
 

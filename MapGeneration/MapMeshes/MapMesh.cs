@@ -30,10 +30,14 @@ namespace nv
 
         [HideInInspector]
         public Vector3 worldPos;
-        
-        public void Init(ArrayGrid<MapElement> map, GameObject root, Vector2Int chunkSize, Vector2Int chunkIndex)
+
+        [HideInInspector]
+        public Vector2Int mapScale;
+
+        public void Init(ArrayGrid<MapElement> map, GameObject root, Vector2Int chunkSize, Vector2Int chunkIndex, Vector2Int mapScale)
         {
             MapData = map;
+            this.mapScale = mapScale;
 
             mapMeshRoot = new GameObject("MapMesh " + chunkIndex);
             mapMeshRoot.transform.SetParent(root.transform);
