@@ -278,7 +278,7 @@ namespace nv
 
                 Vector3 meshPivotOffset = mapObj.Value.objectMeshOffset;
 
-                List<Vector3> worldPositions = positions.Select(x => (new Vector3(x.x * Owner.mapScale.x, 0f, x.y * Owner.mapScale.y)) + Owner.worldPos + meshPivotOffset).ToList();
+                List<Vector3> worldPositions = positions.Select(x => (new Vector3(x.x, 0f, x.y)) + Owner.worldPos + meshPivotOffset).ToList();
 
                 Quaternion meshRot = Quaternion.Euler(mapObj.Value.meshRotation);
 
