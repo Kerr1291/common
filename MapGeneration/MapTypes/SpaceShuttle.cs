@@ -9,13 +9,14 @@ namespace nv
 {
     public class SpaceShuttle : ProcGenMap
     {
+        public float requiredPercentageOfMapNotWalls = .25f;
         public int maxNumberOfRooms = 15;
         public bool mirrorVertical = false;
-        public bool roomsTheSame = true;
 
         public Range roomSizeLimit = new Range(3f, 15f);
         
         public int maxGenerationAttempts = 100;
+        public bool debugOutput = true;
         int generationAttempts = 0;
 
         public override ArrayGrid<MapElement> GeneratedMap
@@ -74,10 +75,7 @@ namespace nv
 
                 generationAttempts++;
                 if(success)
-                {
-                    GeneratedMap = map;
                     break;
-                }
             }
 
             Debug.Log("Done");
@@ -106,11 +104,12 @@ namespace nv
                     p1.x = map.w / 2 - GameRNG.Rand((int)roomSizeLimit.Max);
                     p1.y = map.h / 2 - GameRNG.Rand((int)roomSizeLimit.Max) - (int)roomSizeLimit.Min;
 
-                    r.x = GameRNG.Rand((int)roomSizeLimit.Max) + (int)roomSizeLimit.Min;
+                    r.x = GameRNG.Rand((int)roomSizeLimit.Min, (int)roomSizeLimit.Min + (int)roomSizeLimit.Max);
                     r.y = roomSizeLimit.RandomValuei();
 
                     p2.x = p1.x + r.x;
-                    p2.y = map.h;
+                    p2.y = map.h/2;
+
                     if(p2.x >= map.w)
                         continue;
                 }
@@ -125,7 +124,7 @@ namespace nv
                     p2.x = p1.x + r.x;
                     p2.y = p1.y + r.y;
 
-                    if(p2.x >= map.w - 1 || p2.x >= map.h / 2 + 3)
+                    if(p2.x >= map.w - 1 || p2.y >= map.h / 2 + 3)
                         continue;
                 }
 
@@ -133,6 +132,9 @@ namespace nv
                 for(int j = 0; j < rooms.Count; ++j)
                 {
                     randAgain = true;
+                    //Dev.LogVar(rooms[j]);
+                    //Dev.LogVar(p1);
+                    //Dev.LogVar(p2);
                     if(rooms[j].Contains(p1))
                     {
                         if(!rooms[j].Contains(p2))
@@ -158,10 +160,10 @@ namespace nv
 
                 // Create room                
                 Rect roomRect = Rect.MinMaxRect(p1.x, p1.y, p2.x, p2.y);
-                if(numberOfRooms == 0)
-                    roomTypes.Add(0);
+                //Dev.LogVar("new room", roomRect);
 
                 rooms.Add(roomRect);
+                roomTypes.Add(0);
                 numberOfRooms++;
             }
 
@@ -178,12 +180,12 @@ namespace nv
                     min.x = map.w - min.x - 1;
                     max.x = map.w - max.x - 1;
 
-                    p1.x = max.x;
+                    p1.x = min.x;
 
                     min.x = max.x;
                     max.x = p1.x;
 
-                    roomRect = Rect.MinMaxRect(min.x, min.y, max.y, max.y);
+                    roomRect = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
                 }
                 else
                 {
@@ -193,14 +195,15 @@ namespace nv
                     min.y = map.h - min.y - 1;
                     max.y = map.h - max.y - 1;
 
-                    p1.y = max.y;
+                    p1.y = min.y;
 
                     min.y = max.y;
                     max.y = p1.y;
 
-                    roomRect = Rect.MinMaxRect(min.x, min.y, max.y, max.y);
+                    roomRect = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
                 }
 
+                roomTypes.Insert(i, roomTypes[i]);
                 rooms.Insert(i, roomRect);
             }
 
@@ -221,22 +224,31 @@ namespace nv
             int freeCells = 0;
             for(int x = 0; x < map.MaxValidPosition.x; ++x)
             {
-                for(int y = 0; y < map.MaxValidPosition.y/2; ++y)
+                for(int y = 0; y < map.h/2; ++y)
                 {
-                    if(valueMap[x,y] != valueMap[x+1,y] && valueMap[x+1,y] != valueWall)
+                    int currentValue = valueMap[x, y];
+
+                    int[] nearValues = new int[] 
+                    { valueMap[x + 1, y]
+                    , valueMap[x, y + 1]
+                    , valueMap[x + 1, y + 1]
+                    };
+
+
+                    if(currentValue != nearValues[0] && nearValues[0] != valueWall)
                     {
                         valueMap[x, y] = valueWall;
                     }
-                    else if(valueMap[x, y] != valueMap[x, y + 1] && valueMap[x, y + 1] != valueWall)
+                    if(currentValue != nearValues[1] && nearValues[1] != valueWall)
                     {
                         valueMap[x, y] = valueWall;
                     }
-                    else if(valueMap[x, y] != valueMap[x + 1, y + 1] && valueMap[x + 1, y + 1] != valueWall)
+                    if(currentValue != nearValues[2] && nearValues[2] != valueWall)
                     {
                         valueMap[x, y] = valueWall;
                     }
 
-                    if(valueMap[x, y] != valueWall)
+                    if(currentValue != valueWall)
                     {
                         freeCells += 2;// +2 for mirror
                     }
@@ -245,11 +257,17 @@ namespace nv
                 }
             }
 
-            if(freeCells < map.h * map.w / 4)
+            if(freeCells < (map.h * map.w * requiredPercentageOfMapNotWalls))
+            {
+                if(debugOutput)
+                    Dev.Log(string.Format("Not enough open map space. {0} < {1}", freeCells, (map.h * map.w * requiredPercentageOfMapNotWalls)));
                 return false;
+            }
 
             ConvertValuesToTiles(map, valueMap);
             ConnectClosestRooms(map, valueMap, true);
+            ConvertValuesToTiles(map, valueMap);
+            AddDoors(map, valueMap, 1f);
 
             return true;
         }
@@ -572,6 +590,34 @@ namespace nv
                 else
                 {
                     map[current] = defaultRoomElement;
+                }
+            }
+        }
+
+        protected void AddDoors(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, float doorProbability = 1f)
+        {
+            IEnumerator<Vector2Int> mapIter = IterateOverMap(map);
+
+            while(mapIter.MoveNext())
+            {
+                Vector2Int current = mapIter.Current;
+                var adjacentElements = map.GetAdjacentElements(current, true);
+
+                int roomCells = adjacentElements.Where(x => x == defaultRoomElement).Count();
+                int corridorCells = adjacentElements.Where(x => x == defaultCorridorElement).Count();
+                int doorCells = adjacentElements.Where(x => x == defaultDoorElement).Count();
+
+                if(map[current] == defaultCorridorElement)
+                {
+                    if((corridorCells == 1 && doorCells == 0 && roomCells > 0 && roomCells < 4)
+                     || (corridorCells == 0 && doorCells == 0))
+                    {
+                        float exist = GameRNG.Randf();
+                        if(exist < doorProbability)
+                        {
+                            map[current] = defaultDoorElement;
+                        }
+                    }
                 }
             }
         }
