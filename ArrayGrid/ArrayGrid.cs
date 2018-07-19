@@ -504,9 +504,9 @@ namespace nv
 
         static bool IsOnBoundry(Rect r, Vector2Int p)
         {
-            if(r.x == p.x)
+            if(r.xMin == p.x)
                 return true;
-            if(r.y == p.y)
+            if(r.yMin == p.y)
                 return true;
             if(r.xMax == p.x)
                 return true;
@@ -526,6 +526,27 @@ namespace nv
                 return true;
 
             return EqualityComparer<T>.Default.Equals(GetElement(p), default(T));            
+        }
+
+        public bool IsPositionOnEdge(int x, int y)
+        {
+            return IsPositionOnEdge(new Vector2Int(x, y));
+        }
+
+        public bool IsPositionOnEdge(Vector2Int p)
+        {
+            if(!IsValidPosition(p))
+                return false;
+
+            if(p.x == 0)
+                return true;
+            if(p.y == 0)
+                return true;
+            if(p.x == MaxValidPosition.x)
+                return true;
+            if(p.y == MaxValidPosition.y)
+                return true;
+            return false;
         }
 
         public List<T> GetEmptyElements()
