@@ -132,9 +132,6 @@ namespace nv
                 for(int j = 0; j < rooms.Count; ++j)
                 {
                     randAgain = true;
-                    //Dev.LogVar(rooms[j]);
-                    //Dev.LogVar(p1);
-                    //Dev.LogVar(p2);
                     if(rooms[j].Contains(p1))
                     {
                         if(!rooms[j].Contains(p2))
@@ -160,7 +157,6 @@ namespace nv
 
                 // Create room                
                 Rect roomRect = Rect.MinMaxRect(p1.x, p1.y, p2.x, p2.y);
-                //Dev.LogVar("new room", roomRect);
 
                 rooms.Add(roomRect);
                 roomTypes.Add(0);

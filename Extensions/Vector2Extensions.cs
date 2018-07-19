@@ -73,5 +73,20 @@ namespace nv
         {
             return new Vector3( v.x, y, v.y );
         }
+
+        public static Vector2Int ScaleBy( this Vector2Int v, float s )
+        {
+            return Vector2Int.FloorToInt(new Vector2(v.x, v.y) * s);
+        }
+
+        public static Vector2Int AddScalar(this Vector2Int v, int s)
+        {
+            return v + Vector2Int.one * s;
+        }
+
+        public static Vector2Int DivideBy(this Vector2Int v, float s)
+        {
+            return Vector2Int.FloorToInt(new Vector2(v.x, v.y) / s);
+        }
     }
 }
