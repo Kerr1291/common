@@ -193,5 +193,51 @@ namespace nv
         {
             Instance.rng.Shuffle2D(ref data);
         }
+
+        /// <summary>
+        /// Gets a random angle in radians from 0 to 2PI
+        /// </summary>
+        public static double RandomAngled()
+        {
+            return Instance.rng.RandomAngled();
+        }
+
+        public static double RandomAngled(float maxTheta)
+        {
+            return Instance.rng.RandomAngled(maxTheta);
+        }
+
+        public static double RandomAngled(float minTheta, float maxTheta)
+        {
+            return Instance.rng.RandomAngled(minTheta, maxTheta);
+        }
+
+        /// <summary>
+        /// Gets a random angle in radians from 0 to 2PI
+        /// </summary>
+        public static float RandomAngle()
+        {
+            return Instance.rng.RandomAngle();
+        }
+
+        public static float RandomAngle(float maxTheta)
+        {
+            return Instance.rng.RandomAngle(maxTheta);
+        }
+
+        public static double RandomAngle(float minTheta, float maxTheta)
+        {
+            return Instance.rng.RandomAngle(minTheta, maxTheta);
+        }
+
+        public static Vector2 RandomPointOnCircle(float r)
+        {
+            return Instance.rng.RandomPointOnCircle(r);
+        }
+
+        public static Vector2 RandomPointOnCircle(Vector2 size)
+        {
+            return Instance.rng.RandomPointOnCircle(size);
+        }
     }
 }

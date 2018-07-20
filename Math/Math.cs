@@ -95,12 +95,12 @@ namespace nv
 
         public static Vector2 RectTopLeft( Rect input )
         {
-            return input.position;
+            return input.TopLeft();
         }
 
         public static Vector2 RectBottomRight( Rect input )
         {
-            return new Vector2( input.xMax, input.yMax );
+            return input.BottomRight();
         }
 
         public static void Swap<T>( ref T lhs, ref T rhs )
@@ -125,41 +125,30 @@ namespace nv
                 Swap( ref out_val0, ref out_val1 );
         }
 
-        public static void Clamp( ref Vector2 top_left, ref Vector2 bottom_right, Vector2 pos, Vector2 max_dimensions )
+        public static void Clamp( ref Vector2 pos, Rect area )
         {
-            Sort2( ref top_left.x, ref bottom_right.x );
-            Sort2( ref top_left.y, ref bottom_right.y );
-
-            top_left.x = Mathf.Clamp( top_left.x, pos.x, pos.x + max_dimensions.x );
-            top_left.y = Mathf.Clamp( top_left.y, pos.y, pos.y + max_dimensions.y );
-
-            bottom_right.x = Mathf.Clamp( bottom_right.x, pos.x, pos.x + max_dimensions.x );
-            bottom_right.y = Mathf.Clamp( bottom_right.y, pos.y, pos.y + max_dimensions.y );
+            pos.x = Mathf.Clamp(pos.x, area.xMin, area.xMax);
+            pos.y = Mathf.Clamp(pos.y, area.yMin, area.yMax);
         }
 
         public static void Clamp( ref Rect area, Vector2 pos, Vector2 max_dimensions )
         {
-            area.x = Mathf.Max( area.x, pos.x );
-            area.y = Mathf.Max( area.y, pos.y );
-            area.width = Mathf.Min( area.xMax, pos.x + max_dimensions.x ) - area.x;
-            area.height = Mathf.Min( area.yMax, pos.y + max_dimensions.y ) - area.y;
+            Rect clampRect = new Rect(pos, max_dimensions);
+            area = Clamp(area, clampRect);
         }
 
         public static void Clamp( ref Rect area, Rect min_max )
         {
-            area.x = Mathf.Max( area.x, min_max.x );
-            area.y = Mathf.Max( area.y, min_max.y );
-            area.width = Mathf.Min( area.xMax, min_max.xMax ) - area.x;
-            area.height = Mathf.Min( area.yMax, min_max.yMax ) - area.y;
+            area = Clamp(area, min_max);
         }
 
         public static Rect Clamp( Rect area, Rect min_max )
         {
-            area.x = Mathf.Max( area.x, min_max.x );
-            area.y = Mathf.Max( area.y, min_max.y );
-            area.width = Mathf.Min( area.xMax, min_max.xMax ) - area.x;
-            area.height = Mathf.Min( area.yMax, min_max.yMax ) - area.y;
-            return area;
+            float xMin = Mathf.Max( area.xMin, min_max.xMin );
+            float yMin = Mathf.Max( area.yMin, min_max.yMin );
+            float xMax = Mathf.Min( area.xMax, min_max.xMax );
+            float yMax = Mathf.Min( area.yMax, min_max.yMax );
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
         }
 
         /// <summary>

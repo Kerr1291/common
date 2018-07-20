@@ -110,11 +110,44 @@ namespace nv
                 Vector2Int subCurrent = subGridIter.Current;
                 Vector2 scaledSubCurrent = new Vector2(subCurrent.x * scale.x, subCurrent.y * scale.y);
                 Vector2Int sourcePos = sourceAreaPos + Vector2Int.FloorToInt(scaledSubCurrent);
-                
+
                 subGrid[subCurrent] = grid[sourcePos];
             }
 
             return subGrid;
+        }
+
+        public static Vector2Int Clamp<T>(this ArrayGrid<T> grid, Vector2Int p)
+        {
+            p.Clamp(Vector2Int.zero, grid.MaxValidPosition);
+            return p;
+        }
+
+        /// <summary>
+        /// Wraps the given point "around" to the other side of the grid if it's off the boundry
+        /// </summary>
+        public static Vector2Int Wrap<T>(this ArrayGrid<T> grid, Vector2Int p)
+        {
+            int w = p.x / grid.w;
+            int h = p.y / grid.h;
+
+            int modx = p.x - w * grid.w;
+            int mody = p.y - h * grid.h;
+
+            int x;
+            int y;
+
+            if(modx < 0)
+                x = grid.w + modx;
+            else
+                x = modx;
+
+            if(mody < 0)
+                y = grid.h + mody;
+            else
+                y = mody;
+
+            return new Vector2Int(x, y);
         }
     }
 }

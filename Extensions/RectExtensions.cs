@@ -17,34 +17,64 @@ namespace nv
             return r;
         }
 
-        public static Vector2 TopLeft(this Rect input)
+        public static Vector2 TopLeft(this Rect input, bool flipYAxis = true)
         {
-            return input.position;
+            return new Vector2(input.xMin, flipYAxis ? input.yMin : input.yMax);
         }
 
-        public static Vector2 TopRight(this Rect input)
+        public static Vector2 TopRight(this Rect input, bool flipYAxis = true)
         {
-            return new Vector2(input.xMax, input.position.y);
+            return new Vector2(input.xMax, flipYAxis ? input.yMin : input.yMax);
         }
 
-        public static Vector2 BottomRight(this Rect input)
+        public static Vector2 BottomRight(this Rect input, bool flipYAxis = true)
         {
-            return new Vector2(input.xMax, input.yMax);
+            return new Vector2(input.xMax, flipYAxis ? input.yMax : input.yMin);
         }
 
-        public static Vector2 BottomLeft(this Rect input)
+        public static Vector2 BottomLeft(this Rect input, bool flipYAxis = true)
         {
-            return new Vector2(input.position.x, input.yMax);
+            return new Vector2(input.xMin, flipYAxis ? input.yMax : input.yMin);
         }
 
-        public static void Clamp(this Rect area, Vector2 pos, Vector2 extents)
+        public static void Clamp(this Rect area, Vector2 pos, Vector2 size)
         {
-            Mathnv.Clamp(ref area, pos, extents);
+            Mathnv.Clamp(ref area, pos, size);
         }
 
         public static void Clamp(this Rect area, Rect min_max)
         {
             Mathnv.Clamp(ref area, min_max);
+        }
+
+        public static Range GetXRange(this Rect r)
+        {
+            return new Range(r.xMin, r.xMax);
+        }
+
+        public static Range GetYRange(this Rect r)
+        {
+            return new Range(r.yMin, r.yMax);
+        }
+
+        public static Vector2 GetRandomValue(this Rect r)
+        {
+            return new Vector2(r.GetXRange().RandomValuef(), r.GetYRange().RandomValuef());
+        }
+
+        public static Vector2Int GetRandomValueInt(this Rect r)
+        {
+            return new Vector2Int(r.GetXRange().RandomValuei(), r.GetYRange().RandomValuei());
+        }
+
+        public static Vector2 GetRandomValue(this Rect r, RNG rng)
+        {
+            return new Vector2(r.GetXRange().RandomValuef(rng), r.GetYRange().RandomValuef(rng));
+        }
+
+        public static Vector2Int GetRandomValueInt(this Rect r, RNG rng)
+        {
+            return new Vector2Int(r.GetXRange().RandomValuei(rng), r.GetYRange().RandomValuei(rng));
         }
     }
 }

@@ -9,6 +9,14 @@ namespace nv
 {
     public class AntNest : ProcGenMap
     {
+        public Range strideLimitX = new Range(10f, 100f);
+        public Range strideLimitY = new Range(10f, 100f);
+        public int maxTunnelIterations = 1000;
+
+        public bool placeRooms = true;
+        public Range roomSizeX = new Range(3, 3);
+        public Range roomSizeY = new Range(3, 3);
+
         public int maxGenerationAttempts = 100;
         public bool debugOutput = true;
         int generationAttempts = 0;
@@ -82,127 +90,78 @@ namespace nv
 
         bool GenerateMap(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap)
         {
-            //TODO: port algorithm below
+            map[map.CenterPosition] = defaultCorridorElement;
+
+            Vector2Int s0 = Vector2Int.zero;
+            Vector2 s1 = Vector2Int.zero;
+            Vector2Int p = Vector2Int.zero;
+            Vector2 d = Vector2Int.zero;
+
+            int iterCount = map.Count / 3;
+
+            for(int i = 0; i < iterCount; i++)
+            {
+                s1 = GameRNG.RandomPointOnCircle(map.Size.DivideBy(2)) + map.Size.DivideBy(2);
+
+                d.x = strideLimitX.RandomNormalizedValue();
+                d.y = strideLimitY.RandomNormalizedValue();
+
+                d.x -= .5f;
+                d.y -= .5f;
+
+                int counter = 0;
+                for(; ; )
+                {
+                    //try again
+                    if(counter > maxTunnelIterations)
+                    {
+                        --i;
+                        break;
+                    }
+
+                    s1 += d;
+
+                    p = Vector2Int.FloorToInt(s1);
+                    p = map.Wrap(p);
+
+                    if(map.IsValidPosition(p) && map.GetAdjacentPositionsOfType(p,false,defaultCorridorElement).Count > 0)
+                    {
+                        map[p] = defaultCorridorElement;
+                        break;
+                    }
+                }
+            }
+
+            if(placeRooms)
+            {
+                var areaIter = Mathnv.GetAreaEnumerator(Vector2Int.one, map.MaxValidPosition - Vector2Int.one);
+                while(areaIter.MoveNext())
+                {
+                    Vector2Int current = areaIter.Current;
+
+                    Range limitX = new Range(map.w / 2 - strideLimitX.Min, map.w / 2 + strideLimitX.Min);
+                    Range limitY = new Range(map.h / 2 - strideLimitY.Min, map.h / 2 + strideLimitY.Min);
+
+                    if((limitX.Contains(current.x) && limitY.Contains(current.y)) || map[current] == defaultWallElement)
+                        continue;
+
+                    int n = map.GetAdjacentPositionsOfType(current, false, defaultCorridorElement).Count;
+
+                    if(n == 1)
+                    {
+                        Rect room = new Rect(Vector2.zero, new Vector2(roomSizeX.RandomValuei(), roomSizeY.RandomValuei()));
+                        
+                        var roomIter = Mathnv.GetAreaEnumerator(Vector2Int.FloorToInt(room.min), Vector2Int.FloorToInt(room.max));
+                        while(roomIter.MoveNext())
+                        {
+                            Vector2Int rCurrent = roomIter.Current;
+                            map[current + rCurrent] = defaultRoomElement;
+                        }
+                    }
+                }
+            }
+
             return true;
         }
-
-
-        /*
-         
-    
-    
-		if (level.GetWidth()==0 || level.GetHeight()==0)
-			return;
-
-		level.Clear();
-
-		int x,y;
-
-		level.SetCell(level.GetWidth()/2,level.GetHeight()/2,LevelElementCorridor);
-
-		double x1,y1;
-		double k;
-		double dx, dy;
-		int px, py;
-
-		for (int object=0;object<(int) level.GetWidth()*(int) level.GetHeight()/3;++object)
-		{
-			// degree
-			k = Random(360)*3.1419532/180;
-			// position on ellipse by degree
-			x1 = (double) level.GetWidth()/2+((double)level.GetWidth()/2)*sin(k);	
-			y1 = (double) level.GetHeight()/2+((double)level.GetHeight()/2)*cos(k);
-
-			// object will move not too horizontal and not too vertival
-			do {
-				dx=Random(100);
-				dy=Random(100);
-			} while ((abs((int) dx)<10 && abs((int) dy)<10));
-			dx-=50;
-			dy-=50;
-			dx/=100;
-			dy/=100;
-
-			int counter=0;
-			while (1)
-			{
-				// didn't catch anything after 1000 steps (just to avoid infinite loops)
-				if (counter++>1000)
-				{
-					object--;
-					break;
-				}
-				// move object by small step
-				x1+=dx;
-				y1+=dy;
-
-				// change float to int
-
-				px=(int) x1;
-				py=(int) y1;
-
-				// go through the border to the other side
-
-				if (px<0)
-				{
-					px=(int) level.GetWidth()-1;
-					x1=px;
-				}
-				if (px>(int) level.GetWidth()-1)
-				{
-					px=0;
-					x1=px;
-				}
-				if (py<0)
-				{
-					py=(int) level.GetHeight()-1;
-					y1=py;
-				}
-				if (py>(int) level.GetHeight()-1)
-				{
-					py=0;
-					y1=py;
-				}
-
-				// if object has something to catch, then catch it
-
-				if ((px>0 && level.GetCell(px-1,py)==LevelElementCorridor) ||
-					(py>0 && level.GetCell(px,py-1)==LevelElementCorridor) ||
-					(px<(int) level.GetWidth()-1 && level.GetCell(px+1,py)==LevelElementCorridor) ||
-					(py<(int) level.GetHeight()-1 && level.GetCell(px,py+1)==LevelElementCorridor))
-				{
-					level.SetCell(px,py,LevelElementCorridor);
-					break;
-				}
-			}
-
-		}
-
-		if (with_rooms)
-		{
-			// add halls at the end of corridors
-			for (y=1;y<(int) level.GetHeight()-1;y++)
-			{
-				for (x=1;x<(int) level.GetWidth()-1;x++)
-				{
-					if ((x>(int) level.GetWidth()/2-10 && x<(int) level.GetWidth()/2+10 && y>(int) level.GetHeight()/2-5 && y<(int) level.GetHeight()/2+5) || level.GetCell(x,y)==LevelElementWall)
-						continue;
-
-					int neighbours=CountNeighboursOfType(level,LevelElementCorridor,Position(x,y));
-
-					if (neighbours==1)
-					{
-						for (px=-1;px<=1;px++)
-							for (py=-1;py<=1;py++)
-							{
-								level.SetCell(x+px,y+py,LevelElementRoom);
-							}
-					}
-				}		
-			}
-		} // end of if (with_rooms)
-          
-         
-         */
     }
 }

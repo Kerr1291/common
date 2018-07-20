@@ -119,6 +119,7 @@ namespace nv
 
         public uint Rand( uint a, uint b )
         {
+            if(a == b) return a;
             if( a == 0 ) return Rand( b );
             if( a > b ) Mathnv.Swap( ref a, ref b );
             uint n = 2 * b;
@@ -129,6 +130,7 @@ namespace nv
 
         public int Rand( int a, int b )
         {
+            if(a == b) return a;
             if( a > b ) Mathnv.Swap( ref a, ref b );
 
             int c = b - a;
@@ -137,6 +139,7 @@ namespace nv
 
         public float Rand( float a, float b )
         {
+            if(a == b) return a;
             if( a > b ) Mathnv.Swap( ref a, ref b );
 
             float c = b - a;
@@ -145,6 +148,7 @@ namespace nv
 
         public double Rand( double a, double b )
         {
+            if(a == b) return a;
             if( a > b ) Mathnv.Swap( ref a, ref b );
 
             double c = b - a;
@@ -154,6 +158,7 @@ namespace nv
         // rolling min or max will be rare, but rolling exactly between the two will be common
         public double GaussianRandom( double min, double max )
         {
+            if(min == max) return min;
             if( min > max ) Mathnv.Swap<double>( ref min, ref max );
             min /= 3;
             max /= 3;
@@ -303,6 +308,56 @@ namespace nv
                 for(int i = 0; i < innerLength; ++i)
                     data[n][i] = value[i];
             }
+        }
+
+        /// <summary>
+        /// Gets a random angle in radians from 0 to 2PI
+        /// </summary>
+        public double RandomAngled()
+        {
+            double r = Rand(0.0, 360.0) * Math.PI / 180.0;
+            return r;
+        }
+
+        public double RandomAngled(float maxTheta)
+        {
+            double r = Rand(0.0, maxTheta) * Math.PI / 180.0;
+            return r;
+        }
+
+        public double RandomAngled(float minTheta, float maxTheta)
+        {
+            double r = Rand(minTheta, maxTheta) * Math.PI / 180.0;
+            return r;
+        }
+
+        /// <summary>
+        /// Gets a random angle in radians from 0 to 2PI
+        /// </summary>
+        public float RandomAngle()
+        {
+            return (float)RandomAngled();
+        }
+
+        public float RandomAngle(float maxTheta)
+        {
+            return (float)RandomAngled(maxTheta);
+        }
+
+        public double RandomAngle(float minTheta, float maxTheta)
+        {
+            return (float)RandomAngled(minTheta, maxTheta);
+        }
+
+        public Vector2 RandomPointOnCircle(float r)
+        {
+            return RandomPointOnCircle(Vector2.one * r);
+        }
+
+        public Vector2 RandomPointOnCircle(Vector2 size)
+        {
+            float theta = RandomAngle();
+            return new Vector2(size.x * Mathf.Cos(theta), size.y * Mathf.Sin(theta));
         }
     }
 }

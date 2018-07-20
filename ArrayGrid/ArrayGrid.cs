@@ -74,12 +74,12 @@ namespace nv
 
         public Rect Area
         {
-            get { return new Rect(Vector2Int.zero, Size); }
+            get { return Rect.MinMaxRect(0f,0f,w,h); }
         }
 
         public Rect ValidArea
         {
-            get { return new Rect(Area.x, Area.y, Area.width - 1, Area.height - 1); }
+            get { return Rect.MinMaxRect(0f, 0f, w-1, h-1); }
         }
 
         //raw element count
@@ -89,6 +89,29 @@ namespace nv
             {
                 return data.Count;
             }
+        }
+
+        public Vector2Int CenterPosition
+        {
+            get
+            {
+                return Vector2Int.FloorToInt(Area.center);
+            }
+        }
+
+        public bool IsCenterPosition(Vector2Int pos)
+        {
+            return pos == CenterPosition;
+        }
+
+        public bool IsMidpointX(int x)
+        {
+            return x == CenterPosition.x;
+        }
+
+        public bool IsMidpointY(int y)
+        {
+            return y == CenterPosition.y;
         }
 
         public void Clear()
@@ -247,8 +270,8 @@ namespace nv
 
         public static void CopyArea(ArrayGrid<T> source, Rect source_area, ArrayGrid<T> dest, Rect dest_area)
         {
-            Mathnv.Clamp(ref source_area, source.Area);
-            Mathnv.Clamp(ref dest_area, dest.Area);
+            source_area = Mathnv.Clamp(source_area, source.Area);
+            dest_area = Mathnv.Clamp(dest_area, dest.Area);
 
             int minX = (int)Mathf.Min(dest_area.width, source_area.width);
             int minY = (int)Mathf.Min(dest_area.height, source_area.height);
@@ -257,7 +280,7 @@ namespace nv
             {
                 for(int i = 0; i < minX; ++i)
                 {
-                    dest.SetElement(i + (int)dest_area.x, j + (int)dest_area.y, source[i + (int)source_area.x, j + (int)source_area.y]);
+                    dest.SetElement(i + (int)dest_area.xMin, j + (int)dest_area.yMin, source[i + (int)source_area.xMin, j + (int)source_area.yMin]);
                 }
             }
         }
@@ -266,8 +289,8 @@ namespace nv
         //Warning: only use this if you know what you're doing!
         public static void ReferenceArea(ArrayGrid<T> source, Rect source_area, ArrayGrid<T> dest, Rect dest_area)
         {
-            Mathnv.Clamp(ref source_area, source.Area);
-            Mathnv.Clamp(ref dest_area, dest.Area);
+            source_area = Mathnv.Clamp(source_area, source.Area);
+            dest_area = Mathnv.Clamp(dest_area, dest.Area);
 
             int minX = (int)Mathf.Min(dest_area.width, source_area.width);
             int minY = (int)Mathf.Min(dest_area.height, source_area.height);
@@ -276,7 +299,7 @@ namespace nv
             {
                 for(int i = 0; i < minX; ++i)
                 {
-                    dest[i + (int)dest_area.x, j + (int)dest_area.y] = source[i + (int)source_area.x, j + (int)source_area.y];
+                    dest[i + (int)dest_area.xMin, j + (int)dest_area.yMin] = source[i + (int)source_area.xMin, j + (int)source_area.yMin];
                 }
             }
         }
@@ -436,19 +459,19 @@ namespace nv
         ///Helpers for iterating over blocks of data in map areas
         static int IterJStart(Rect r)
         {
-            return (int)Mathnv.RectTopLeft(r).y;
+            return (int)r.TopLeft().y;
         }
         static int IterIStart(Rect r)
         {
-            return (int)Mathnv.RectTopLeft(r).x;
+            return (int)r.TopLeft().x;
         }
         static int IterJEnd(Rect r)
         {
-            return (int)Mathnv.RectBottomRight(r).y;
+            return (int)r.BottomRight().y;
         }
         static int IterIEnd(Rect r)
         {
-            return (int)Mathnv.RectBottomRight(r).x;
+            return (int)r.BottomRight().x;
         }
 
         class FloodFillData
