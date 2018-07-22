@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace nv
@@ -16,8 +15,8 @@ namespace nv
         Material instanceMaterial;
         int subMeshIndex;
 
-        int cachedInstanceCount = -1;
-        int cachedSubMeshIndex = -1;
+        //int cachedInstanceCount = -1;
+        //int cachedSubMeshIndex = -1;
         ComputeBuffer posBuffer;
         ComputeBuffer rotBuffer;
         ComputeBuffer argsBuffer;
@@ -49,7 +48,7 @@ namespace nv
                 Graphics.DrawMeshInstancedIndirect(instanceMesh, subMeshIndex, instanceMaterial, boundingVolume, argsBuffer);
                 yield return waitForEndOfFrame;
             }
-            yield break;
+            //yield break;
         }
 
         public void SetRenderData(List<Vector3> positions, List<float> scales = null, List<Vector4> rotations = null)
@@ -111,8 +110,8 @@ namespace nv
             }
             argsBuffer.SetData(args);
 
-            cachedInstanceCount = instanceCount;
-            cachedSubMeshIndex = subMeshIndex;
+            //cachedInstanceCount = instanceCount;
+            //cachedSubMeshIndex = subMeshIndex;
         }
 
         public void Start()

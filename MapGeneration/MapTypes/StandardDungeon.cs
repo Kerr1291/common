@@ -17,7 +17,7 @@ namespace nv
         
         public int maxGenerationAttempts = 100;
         int generationAttempts = 0;
-        int roomCount = 0;
+        //int roomCount = 0;
 
         [EditScriptable]
         public MapElement defaultRoomElement;
@@ -48,7 +48,7 @@ namespace nv
                 yield break;
 
             generationAttempts = 0;
-            roomCount = 0;
+            //roomCount = 0;
 
             ArrayGrid<MapElement> map = null;
             ArrayGrid<int> valueMap = null;
@@ -407,7 +407,7 @@ namespace nv
 
             }
 
-            return true;
+            //return true;
         }
 
         protected void ConvertValuesToTiles(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap)

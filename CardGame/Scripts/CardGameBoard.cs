@@ -58,7 +58,7 @@ namespace nv.Cards
                 Destroy( c.gameObject );
             pendingCards.Clear();
 
-            CardPlacement start = AddPlacement( 0, 0 );
+            //CardPlacement start = AddPlacement( 0, 0 );
             //if( GameCamera.GetGameCamera( 0 ) != null )
             //    GameCamera.GetGameCamera( 0 ).AddObjectToTracking( start.gameObject );
         }

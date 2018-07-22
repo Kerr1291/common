@@ -194,8 +194,8 @@ namespace nv
         //[Header("Force this camera to be assigned to this player?")]
         //[SerializeField]
         //private bool forceCameraPlayerID = false;
-        [SerializeField]
-        private int forcedPlayerID = 0;
+        //[SerializeField]
+        //private int forcedPlayerID = 0;
 
         [SerializeField]
         [Header("Change this to change where the camera will start in the scene")]

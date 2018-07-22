@@ -644,7 +644,7 @@ namespace nv
             Dictionary<string, MethodInfo> matchingHandlers;
 
             //Does a method handling this data type exist?
-            if(!enabledHandlers.TryGetValue(publishedData.GetType(), out matchingHandlers))
+            if(!enabledHandlers.TryGetValue( handlerKey, out matchingHandlers))
                 return result;
 
             MethodInfo method = null;

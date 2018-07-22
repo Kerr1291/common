@@ -29,7 +29,7 @@ namespace nv.editor
 
                         if(PrefabUtility.GetPrefabType(searchThisGameObject) == PrefabType.PrefabInstance)
                         {
-                            if(PrefabUtility.GetPrefabParent(searchThisGameObject) == to)
+                            if(PrefabUtility.GetCorrespondingObjectFromSource(searchThisGameObject) == to)
                             {
                                 Debug.Log(string.Format("referenced by {0}, {1}", searchThisGameObject.name, searchThisGameObject.GetType()), searchThisGameObject);
                                 objectsThatReferenceComponent.Add(searchThisGameObject);

@@ -128,6 +128,7 @@ namespace nv
             private set;
         }
 
+        [HideInInspector]
         public Bounds mapBounds;
 
         [SerializeField]

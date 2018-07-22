@@ -3,9 +3,9 @@ using UnityEngine.Events;
 
 namespace nvEvent
 {
-    public class RegisterInputAction
+    public class RegisterInputType
     {
-        public RegisterInputAction(
+        public RegisterInputType(
             UnityAction action,
             KeyCode key = KeyCode.Mouse0,
             bool onPress = true,
@@ -41,9 +41,9 @@ namespace nvEvent
         public Camera touchableObjectCamera = null;
     }
 
-    public class UnregisterInputAction
+    public class UnregisterInputType
     {
-        public UnregisterInputAction(
+        public UnregisterInputType(
             UnityAction action,
             KeyCode key = KeyCode.Mouse0,
             bool onPress = true,

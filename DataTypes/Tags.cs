@@ -140,6 +140,11 @@ namespace nv
             return ToString() == other.ToString();
         }
 
+        public override bool Equals( object other )
+        {
+            return ToString() == other.ToString();
+        }
+
         public IEnumerator<string> GetEnumerator()
         {
             return ((IEnumerable<string>)tags).GetEnumerator();
@@ -158,6 +163,11 @@ namespace nv
         public int GetHashCode(object obj)
         {
             return ((Tags)obj).ToString().GetHashCode();
+        }
+
+        public override int GetHashCode()
+        {
+            return ToString().GetHashCode();
         }
 
         public static bool operator ==(Tags x, Tags y)

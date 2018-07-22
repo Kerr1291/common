@@ -5,11 +5,6 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-#if UNITY_EDITOR
-using NUnit.Framework;
-using UnityEngine.TestTools;
-#endif
-
 namespace nv
 {
 

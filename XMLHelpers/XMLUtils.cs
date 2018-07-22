@@ -35,6 +35,7 @@ namespace nv
             }
             catch(System.Exception e)
             {
+                Dev.LogError( e.Message );
                 //System.Windows.Forms.MessageBox.Show("Error creating/saving file "+ e.Message);
             }
             finally
@@ -65,6 +66,7 @@ namespace nv
             }
             catch(System.Exception e)
             {
+                Dev.LogError( e.Message );
                 //System.Windows.Forms.MessageBox.Show("Error loading file " + e.Message);
                 returnResult = false;
             }

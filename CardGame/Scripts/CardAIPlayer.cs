@@ -106,7 +106,7 @@ namespace nv.Cards
         bool DoTryPlace(int xmin, int xmax, int ymin, int ymax, int size)
         {
             usedCards.Clear();
-            List<CardPlacement> spots = new List<CardPlacement>();
+            //List<CardPlacement> spots = new List<CardPlacement>();
             bool result = false;
 
             bool xFirst = GameRNG.Rand()%2 == 1;

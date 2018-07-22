@@ -24,13 +24,13 @@ namespace nv
         //=======================================================================
 
         [Header("Actions for outside normal game play")]
-        public List<InputAction> systemInputActions;
+        public List<InputType> systemInputActions;
 
         [Header("Actions for inside normal game play")]
-        public List<InputAction> gameInputActions;
+        public List<InputType> gameInputActions;
 
         [Header("Actions always enabled in debug mode")]
-        public List<InputAction> debugInputActions;
+        public List<InputType> debugInputActions;
 
         public virtual bool IsSystemMode
         {
@@ -77,7 +77,7 @@ namespace nv
         /// Register a key to a callback. Example:
         /// GameInput.Register( KeyCode.Mouse0, TryPick );
         /// </summary>
-        public virtual void Register(List<InputAction> inputActions, KeyCode key, UnityAction action, InputAction.KeyState keystate = InputAction.KeyState.OnPress, InputAction.TouchableObject optionalTouchable = null)
+        public virtual void Register(List<InputType> inputActions, KeyCode key, UnityAction action, InputType.KeyState keystate = InputType.KeyState.OnPress, InputType.TouchableObject optionalTouchable = null)
         {
             //unregister first to prevent double-adding of event handlers
 
@@ -88,7 +88,7 @@ namespace nv
                 {
                     foreach(var pair in inputActions[i].keyEvents)
                     {
-                        if((pair.onKeyState & keystate) != InputAction.KeyState.None)
+                        if((pair.onKeyState & keystate) != InputType.KeyState.None)
                         {
                             pair.events.RemoveListener(action);
                             pair.events.AddListener(action);
@@ -97,7 +97,7 @@ namespace nv
                     }
 
                     //if we reach this point, the pair doesn't exist
-                    InputAction.KeyEvent newPair = new InputAction.KeyEvent();
+                    InputType.KeyEvent newPair = new InputType.KeyEvent();
                     newPair.onKeyState = keystate;
                     newPair.events.AddListener(action);
                     inputActions[i].keyEvents.Add(newPair);
@@ -106,8 +106,8 @@ namespace nv
             }
 
             //if we reach this point, the action doesn't exist
-            InputAction newAction = new InputAction();
-            InputAction.KeyEvent newPairForNewAction = new InputAction.KeyEvent();
+            InputType newAction = new InputType();
+            InputType.KeyEvent newPairForNewAction = new InputType.KeyEvent();
             newPairForNewAction.onKeyState = keystate;
             newPairForNewAction.events = new UnityEvent();
             newPairForNewAction.events.AddListener(action);
@@ -121,7 +121,7 @@ namespace nv
         /// Removes a key from the list of callbacks. Example:
         /// GameInput.Unregister( KeyCode.Mouse0, TryPick );
         /// </summary>
-        public virtual void Unregister(List<InputAction> inputActions, KeyCode key, UnityAction action, InputAction.KeyState keystate = InputAction.KeyState.OnPress)
+        public virtual void Unregister(List<InputType> inputActions, KeyCode key, UnityAction action, InputType.KeyState keystate = InputType.KeyState.OnPress)
         {
             for(int i = 0; i < inputActions.Count; ++i)
             {
@@ -129,7 +129,7 @@ namespace nv
                 {
                     for(int j = 0; j < inputActions[i].keyEvents.Count; ++j)
                     {
-                        if((inputActions[i].keyEvents[j].onKeyState & keystate) != InputAction.KeyState.None)
+                        if((inputActions[i].keyEvents[j].onKeyState & keystate) != InputType.KeyState.None)
                         {
                             inputActions[i].keyEvents[j].events.RemoveListener(action);
 
@@ -200,7 +200,7 @@ namespace nv
 
         public virtual bool IsPointOn(Vector2 screenPoint, GameObject touchableObject, Camera fromCamera, LayerMask mask)
         {
-            if(!InputAction.TouchableObject.IsTouchableType(touchableObject))
+            if(!InputType.TouchableObject.IsTouchableType(touchableObject))
             {
                 Debug.LogError("GameObject " + touchableObject.name + " is not a touchable type. Must have a component of type Collider(2D), SpriteRenderer, or RectTransform.");
                 return false;
@@ -310,7 +310,7 @@ namespace nv
             return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPoint, fromCamera);            
         }
 
-        protected virtual void UpdateInput(List<InputAction> inputActions)
+        protected virtual void UpdateInput(List<InputType> inputActions)
         {
             for(int i = 0; i < inputActions.Count; ++i)
             {
@@ -320,11 +320,11 @@ namespace nv
                         continue;
 
                     bool willInvoke = false;
-                    if((pair.onKeyState & InputAction.KeyState.OnPress) != InputAction.KeyState.None && Input.GetKeyDown(inputActions[i].key))
+                    if((pair.onKeyState & InputType.KeyState.OnPress) != InputType.KeyState.None && Input.GetKeyDown(inputActions[i].key))
                         willInvoke = true;
-                    else if((pair.onKeyState & InputAction.KeyState.OnHold) != InputAction.KeyState.None && Input.GetKey(inputActions[i].key))
+                    else if((pair.onKeyState & InputType.KeyState.OnHold) != InputType.KeyState.None && Input.GetKey(inputActions[i].key))
                         willInvoke = true;
-                    else if((pair.onKeyState & InputAction.KeyState.OnRelease) != InputAction.KeyState.None && Input.GetKeyUp(inputActions[i].key))
+                    else if((pair.onKeyState & InputType.KeyState.OnRelease) != InputType.KeyState.None && Input.GetKeyUp(inputActions[i].key))
                         willInvoke = true;
 
                     if(willInvoke)
@@ -382,23 +382,23 @@ namespace nv
         }
 
         [CommunicationCallback]
-        protected virtual void Handle(nvEvent.RegisterInputAction gameEvent)
+        protected virtual void Handle(nvEvent.RegisterInputType gameEvent)
         {
-            InputAction.KeyState onKeyState = InputAction.KeyState.None;
+            InputType.KeyState onKeyState = InputType.KeyState.None;
             if(gameEvent.onPress)
-                onKeyState |= InputAction.KeyState.OnPress;
+                onKeyState |= InputType.KeyState.OnPress;
             if(gameEvent.onHold)
-                onKeyState |= InputAction.KeyState.OnHold;
+                onKeyState |= InputType.KeyState.OnHold;
             if(gameEvent.onRelease)
-                onKeyState |= InputAction.KeyState.OnRelease;
+                onKeyState |= InputType.KeyState.OnRelease;
 
-            if(onKeyState == InputAction.KeyState.None)
+            if(onKeyState == InputType.KeyState.None)
                 return;
 
-            InputAction.TouchableObject touchable = null;
+            InputType.TouchableObject touchable = null;
             if(gameEvent.touchableObject != null)
             {
-                touchable = new InputAction.TouchableObject(gameEvent.touchableObject,gameEvent.touchableObjectCamera);
+                touchable = new InputType.TouchableObject(gameEvent.touchableObject,gameEvent.touchableObjectCamera);
             }
 
             if(gameEvent.gameAction)
@@ -410,17 +410,17 @@ namespace nv
         }
 
         [CommunicationCallback]
-        protected virtual void Handle(nvEvent.UnregisterInputAction gameEvent)
+        protected virtual void Handle(nvEvent.UnregisterInputType gameEvent)
         {
-            InputAction.KeyState onKeyState = InputAction.KeyState.None;
+            InputType.KeyState onKeyState = InputType.KeyState.None;
             if(gameEvent.onPress)
-                onKeyState |= InputAction.KeyState.OnPress;
+                onKeyState |= InputType.KeyState.OnPress;
             if(gameEvent.onHold)
-                onKeyState |= InputAction.KeyState.OnHold;
+                onKeyState |= InputType.KeyState.OnHold;
             if(gameEvent.onRelease)
-                onKeyState |= InputAction.KeyState.OnRelease;
+                onKeyState |= InputType.KeyState.OnRelease;
 
-            if(onKeyState == InputAction.KeyState.None)
+            if(onKeyState == InputType.KeyState.None)
                 return;
 
             if(gameEvent.gameAction)
@@ -456,7 +456,7 @@ namespace nv
             ValidateTouchables(debugInputActions);
         }
 
-        protected virtual void ValidateTouchables(List<InputAction> inputActions)
+        protected virtual void ValidateTouchables(List<InputType> inputActions)
         {
             for(int i = 0; i < inputActions.Count; ++i)
             {
@@ -473,7 +473,7 @@ namespace nv
     }
 
     [System.Serializable]
-    public class InputAction
+    public class InputType
     {
         [System.Flags]
         public enum KeyState

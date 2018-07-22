@@ -565,7 +565,7 @@ namespace nv
 
             }
 
-            return true;
+            //return true;
         }
 
         protected void ConvertValuesToTiles(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap)
