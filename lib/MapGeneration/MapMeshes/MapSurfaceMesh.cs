@@ -214,7 +214,7 @@ namespace nv
             }
         }
 
-        public void Apply(bool update_collider = true)
+        public IEnumerator Apply(bool update_collider = true)
         {
             //only need to calculate nearby vertices if we're going to be using mesh smoothing
             if(smoothMesh)
@@ -250,6 +250,7 @@ namespace nv
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
             
             meshRenderer.sharedMaterial = renderMat;
+            yield break;
         }
 
         void CreateObjectRenderers()
@@ -604,7 +605,7 @@ namespace nv
             }
         }
 
-        public void TriangulateRows(ArrayGrid<MapElement> mesh_input)
+        public IEnumerator TriangulateRows(ArrayGrid<MapElement> mesh_input)
         {
             for(int j = 0; j < mesh_input.ValidArea.size.y; ++j)
             {
@@ -635,6 +636,7 @@ namespace nv
             {
                 TriangulateGapRow(mesh_input);
             }
+            yield break;
         }
 
         private void SwapRowCaches()

@@ -46,6 +46,8 @@ namespace nv
         int valueWall = -1;
         int valueHall = -2;
 
+        bool success = false;
+
         public override IEnumerator Generate()
         {
             //cannot generate with nonzero map size
@@ -71,7 +73,7 @@ namespace nv
                 map = CreateBaseMap();
                 valueMap = new ArrayGrid<int>(mapSize, valueWall);
 
-                bool success = GenerateMap(map, valueMap);
+                yield return GenerateMap(map, valueMap);
 
                 generationAttempts++;
                 if(success)
@@ -86,7 +88,7 @@ namespace nv
             yield break;
         }
 
-        bool GenerateMap(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap)
+        IEnumerator GenerateMap(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap)
         {
             Vector2Int p1 = Vector2Int.zero;
             Vector2Int p2 = Vector2Int.zero;
@@ -162,7 +164,7 @@ namespace nv
                 roomTypes.Add(0);
                 numberOfRooms++;
             }
-
+            yield return new WaitForEndOfFrame();
             // create mirror
             for(int i = 0; i < numberOfRooms; ++i)
             {
@@ -203,6 +205,7 @@ namespace nv
                 rooms.Insert(i, roomRect);
             }
 
+            yield return new WaitForEndOfFrame();
             for(int i = 0; i < rooms.Count; ++i)
             {
                 IEnumerator<Vector2Int> areaIter = Mathnv.GetAreaEnumerator(Vector2Int.FloorToInt(rooms[i].min), Vector2Int.FloorToInt(rooms[i].max));
@@ -217,6 +220,7 @@ namespace nv
                 }
             }
 
+            yield return new WaitForEndOfFrame();
             int freeCells = 0;
             for(int x = 0; x < map.MaxValidPosition.x; ++x)
             {
@@ -257,7 +261,8 @@ namespace nv
             {
                 if(debugOutput)
                     Dev.Log(string.Format("Not enough open map space. {0} < {1}", freeCells, (map.h * map.w * requiredPercentageOfMapNotWalls)));
-                return false;
+                success = false;
+                yield break;
             }
 
             ConvertValuesToTiles(map, valueMap);
@@ -265,7 +270,8 @@ namespace nv
             ConvertValuesToTiles(map, valueMap);
             AddDoors(map, valueMap, 1f);
 
-            return true;
+            success = true;
+            yield break;
         }
 
         protected void FillDisconnectedRoomsWithDifferentValues(ArrayGrid<MapElement> map, ArrayGrid<int> valueMap, ref int countOfRoomsFilled)

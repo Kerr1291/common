@@ -179,7 +179,7 @@ namespace nv
             while(visibleIter.MoveNext())
             {
                 Vector2Int current = visibleIter.Current;                
-                this[current].GenerateMesh(true);
+                yield return this[current].GenerateMesh(true);
             }
             yield break;
         }

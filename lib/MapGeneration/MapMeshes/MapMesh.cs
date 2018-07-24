@@ -58,18 +58,19 @@ namespace nv
             }
         }
 
-        public void GenerateMesh(bool generateCollisionMesh = true)
+        public IEnumerator GenerateMesh(bool generateCollisionMesh = true)
         {
             //generate the meshes
             foreach(var surface in Surfaces)
             {
                 surface.Clear();
                 surface.FillFirstRowCache(MapData);
-                surface.TriangulateRows(MapData);
-                surface.Apply(generateCollisionMesh);
+                yield return surface.TriangulateRows(MapData);
+                yield return surface.Apply(generateCollisionMesh);
             }
 
             mapMeshRoot.transform.localPosition = worldPos;
+            yield break;
         }
 
         public void RenderObjects()

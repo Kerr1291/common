@@ -46,9 +46,12 @@ namespace nv
             //renderTarget = Camera.main;
         }
 
+        /// <summary>
+        /// Needs to be called in a Monobehavior's Update() to render correctly
+        /// </summary>
         public void RenderObjects()
         {
-            Graphics.DrawMeshInstancedIndirect(instanceMesh, subMeshIndex, instanceMaterial, boundingVolume, argsBuffer, 0, matProperties, UnityEngine.Rendering.ShadowCastingMode.On, true, renderLayer);
+            Graphics.DrawMeshInstancedIndirect(instanceMesh, subMeshIndex, instanceMaterial, boundingVolume, argsBuffer, 0, matProperties, UnityEngine.Rendering.ShadowCastingMode.Off, false, renderLayer);
         }
 
         public void SetRenderData(List<Vector3> positions, List<float> scales = null, List<Vector4> rotations = null)
@@ -109,6 +112,10 @@ namespace nv
                 args[0] = args[1] = args[2] = args[3] = 0;
             }
             argsBuffer.SetData(args);
+
+            //need to set the compute buffers in the material property block for the draw call to work properly
+            matProperties.SetBuffer("positionBuffer", posBuffer);
+            matProperties.SetBuffer("rotationBuffer", rotBuffer);
         }
 
         public void FreeMemory()
