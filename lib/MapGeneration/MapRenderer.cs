@@ -138,7 +138,7 @@ namespace nv
             while(mapData.GeneratedMap == null)
                 yield return null;
 
-            yield return CreateChunks();
+            CreateChunks();
             yield return RenderChunks();
         }
 
@@ -156,7 +156,7 @@ namespace nv
             chunkViews.Clear();
         }
 
-        public IEnumerator CreateChunks()
+        public void CreateChunks()
         {
             //Vector2Int center = Vector2Int.FloorToInt(new Vector2(MapSize.x, MapSize.y) * .5f);
 
@@ -169,8 +169,6 @@ namespace nv
                 Vector2Int current = visibleIter.Current;
                 CreateChunk(current);
             }
-
-            yield break;
         }
 
         public IEnumerator RenderChunks()
@@ -179,7 +177,7 @@ namespace nv
             while(visibleIter.MoveNext())
             {
                 Vector2Int current = visibleIter.Current;                
-                yield return this[current].GenerateMesh(true);
+                this[current].GenerateMesh(true);
             }
             yield break;
         }

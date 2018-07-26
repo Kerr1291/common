@@ -102,18 +102,6 @@ namespace nv
             if(triangles.Count <= 0)
                 return;
 
-            //Vector3[] verts;
-            //Vector3[] norms;
-            //int[] tris = null;
-            //Vector2[] uvs;
-            //int offset = vertices.Count;
-            //if(renderMat.name == "treemat")
-            //{
-            //    Meshes.MakeSphere(out verts, out norms, out tris, out uvs, 10f);
-            //    tris = tris.Select(x => (x + offset)).ToArray();
-            //    vertices.AddRange(verts);
-            //}
-
             mesh.vertices = vertices.ToArray();
 
             CalculateNormals();
@@ -123,15 +111,7 @@ namespace nv
                 //mesh.uv = simple_uvs.ToArray();
             }
 
-            //if(renderMat.name == "treemat")
-            //{
-            //    mesh.subMeshCount = 2;
-            //    //triangles.AddRange(tris);
-            //    mesh.SetTriangles(tris,1);
-            //}
-
             mesh.SetTriangles(triangles, 0);
-            //mesh.triangles = triangles.ToArray();
 
             if(update_collider)
                 meshCollider.sharedMesh = meshFilter.sharedMesh;

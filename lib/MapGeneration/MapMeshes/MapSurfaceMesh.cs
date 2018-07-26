@@ -29,6 +29,8 @@ namespace nv
         public float innerHeight = 0f;
 
         public bool smoothMesh = true;
+        public float smoothingSkipHeight = 0f;
+        public bool smoothingSkipSeams = true;
 
         public bool useUVMap = false;
 
@@ -175,6 +177,7 @@ namespace nv
             mesh.name = surfaceRoot.name;
             vertices = new List<Vector3>();
             triangles = new List<int>();
+            normals = new Vector3[0];
 
             rowCacheMax = new int[ChunkSize.x * 2 + 1];
             rowCacheMin = new int[ChunkSize.x * 2 + 1];
@@ -214,7 +217,7 @@ namespace nv
             }
         }
 
-        public IEnumerator Apply(bool update_collider = true)
+        public void Apply(bool update_collider = true)
         {
             //only need to calculate nearby vertices if we're going to be using mesh smoothing
             if(smoothMesh)
@@ -224,6 +227,11 @@ namespace nv
                         
             CalculateNormals();
             CalculateSimpleUVs();
+
+            if(vertices.Count != normals.Length)
+            {
+                Dev.LogError(string.Format("{0} vertices and {1} normals! These values need to match. We have an error somewhere in mesh generation: {2}", vertices.Count, normals.Length, name + "/" + Owner.name));
+            }
 
             if(vertices.Count > 0)
                 mesh.vertices = vertices.ToArray();
@@ -250,7 +258,6 @@ namespace nv
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
             
             meshRenderer.sharedMaterial = renderMat;
-            yield break;
         }
 
         void CreateObjectRenderers()
@@ -311,6 +318,9 @@ namespace nv
         [SerializeField]
         [HideInInspector]
         Vector2 maxVertex;
+        [SerializeField]
+        [HideInInspector]
+        Vector2 minVertex;
 
         void AddNeighbor(int vertex, int neighbor_a, int neighbor_b)
         {
@@ -319,6 +329,12 @@ namespace nv
 
             if(vertices[vertex].z > maxVertex.y)
                 maxVertex.y = vertices[vertex].z;
+
+            if(vertices[vertex].x < minVertex.x)
+                minVertex.x = vertices[vertex].x;
+
+            if(vertices[vertex].z < minVertex.y)
+                minVertex.y = vertices[vertex].z;
 
             if(vertex_neighbors[vertex] == null)
                 vertex_neighbors[vertex] = new List<int>();
@@ -341,6 +357,10 @@ namespace nv
             vertex_neighbors = new List<int>[vertices.Count];
 
             maxVertex = Vector2.zero;
+            minVertex = new Vector2(float.MaxValue,float.MaxValue);
+
+            if(triangles.Count <= 0)
+                return;
 
             int t = 0;
             do
@@ -364,6 +384,8 @@ namespace nv
 
         void SmoothVertex(int vertex, float skip_height = 0f, bool skip_seams = true)
         {
+            //TODO: need to smooth the vertices (x and z positions) that match wall vertices
+
             Vector3 vertexToSmooth = vertices[vertex];
 
             //don't smooth vertices near this value, useful for retaining 'nice' seams
@@ -373,16 +395,16 @@ namespace nv
             bool xSeam = false;
             bool zSeam = false;
 
-            if(vertexToSmooth.x > maxVertex.x - 1f)
+            if(vertexToSmooth.x > (maxVertex.x - 1f ))
                 xSeam = true;
 
-            if(vertexToSmooth.z > maxVertex.y - 1f)
+            if(vertexToSmooth.z > (maxVertex.y - 1f ))
                 zSeam = true;
 
-            if(vertexToSmooth.x < 1f)
+            if(vertexToSmooth.x < (minVertex.x + 1f ))
                 xSeam = true;
 
-            if(vertexToSmooth.z < 1f)
+            if(vertexToSmooth.z < (minVertex.y + 1f ))
                 zSeam = true;
 
             if(skip_seams && (zSeam || xSeam))
@@ -442,13 +464,13 @@ namespace nv
 
         void CalculateNormals()
         {
+            normals = new Vector3[vertices.Count];
+
             if(vertices.Count <= 0)
                 return;
 
             if(triangles.Count <= 0)
                 return;
-
-            normals = new Vector3[vertices.Count];
 
             int t = 0;
             do
@@ -465,9 +487,9 @@ namespace nv
                 //apply smoothing to the vertices
                 if(smoothMesh)
                 {
-                    SmoothVertex(a);
-                    SmoothVertex(b);
-                    SmoothVertex(c);
+                    SmoothVertex(a, smoothingSkipHeight, smoothingSkipSeams);
+                    SmoothVertex(b, smoothingSkipHeight, smoothingSkipSeams);
+                    SmoothVertex(c, smoothingSkipHeight, smoothingSkipSeams);
                 }
 
                 //calculate the triangle's normal
@@ -523,9 +545,10 @@ namespace nv
 
         private void CacheNextEdgeAndCorner(int i, MapElement xMin, MapElement xMax, Vector2Int minPos, Vector2Int maxPos)
         {
+            bool hasMeshElement = (elementEvaluator.IsMeshElement(xMin) || elementEvaluator.IsMeshElement(xMax));
             Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
             Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
-            if(!IsEqual(xMin, xMax))
+            if(hasMeshElement && !IsEqual(xMin, xMax))
             {
                 rowCacheMax[i + 1] = vertices.Count;
                 vertices.Add(ToEdgePosX(wposMin));
@@ -541,9 +564,10 @@ namespace nv
 
         private void CacheNextEdgeAndCornerWithOffset(int i, MapElement xMin, MapElement xMax, Vector3 offset, Vector2Int minPos, Vector2Int maxPos)
         {
+            bool hasMeshElement = (elementEvaluator.IsMeshElement(xMin) || elementEvaluator.IsMeshElement(xMax));
             Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
             Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
-            if(!IsEqual(xMin, xMax))
+            if(hasMeshElement && !IsEqual(xMin, xMax))
             {
                 rowCacheMax[i + 1] = vertices.Count;
                 vertices.Add(ToEdgePosX(wposMin));
@@ -559,9 +583,10 @@ namespace nv
 
         private void CacheNextEdgeAndCornerWithOffset(int i, MapElement xMin, MapElement xMax, Vector3 minOffset, Vector3 maxOffset, Vector2Int minPos, Vector2Int maxPos)
         {
+            bool hasMeshElement = (elementEvaluator.IsMeshElement(xMin) || elementEvaluator.IsMeshElement(xMax));
             Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
             Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
-            if(!IsEqual(xMin, xMax))
+            if(hasMeshElement && !IsEqual(xMin, xMax))
             {
                 rowCacheMax[i + 1] = vertices.Count;
                 vertices.Add(ToEdgePosX(wposMin) + minOffset);
@@ -577,11 +602,12 @@ namespace nv
 
         private void CacheNextMiddleEdge(MapElement yMin, MapElement yMax, Vector2Int minPos, Vector2Int maxPos)
         {
+            bool hasMeshElement = (elementEvaluator.IsMeshElement(yMin) || elementEvaluator.IsMeshElement(yMax));
             Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
             edgeCacheMin = edgeCacheMax;
-            if(Wall != null)
+            if(hasMeshElement && Wall != null)
                 Wall.PrepareCacheForNextCell();
-            if(!IsEqual(yMin, yMax))
+            if(hasMeshElement && !IsEqual(yMin, yMax))
             {
                 edgeCacheMax = vertices.Count;
                 vertices.Add(ToEdgePosY(wposMin));
@@ -592,11 +618,12 @@ namespace nv
 
         private void CacheNextMiddleEdgeWithOffset(MapElement yMin, MapElement yMax, Vector3 offset, Vector2Int minPos, Vector2Int maxPos)
         {
+            bool hasMeshElement = (elementEvaluator.IsMeshElement(yMin) || elementEvaluator.IsMeshElement(yMax));
             Vector3 wposMin = new Vector3(minPos.x, 0f, minPos.y);
             edgeCacheMin = edgeCacheMax;
-            if(Wall != null)
+            if(hasMeshElement && Wall != null)
                 Wall.PrepareCacheForNextCell();
-            if(!IsEqual(yMin, yMax))
+            if(hasMeshElement && !IsEqual(yMin, yMax))
             {
                 edgeCacheMax = vertices.Count;
                 vertices.Add(ToEdgePosY(wposMin) + offset);
@@ -605,7 +632,7 @@ namespace nv
             }
         }
 
-        public IEnumerator TriangulateRows(ArrayGrid<MapElement> mesh_input)
+        public void TriangulateRows(ArrayGrid<MapElement> mesh_input)
         {
             for(int j = 0; j < mesh_input.ValidArea.size.y; ++j)
             {
@@ -636,7 +663,6 @@ namespace nv
             {
                 TriangulateGapRow(mesh_input);
             }
-            yield break;
         }
 
         private void SwapRowCaches()
