@@ -95,6 +95,8 @@ namespace nv
         [HideInInspector]
         Mesh mesh;
 
+        Dictionary<int,int> vertHasWall;
+
         [SerializeField]
         [HideInInspector]
         List<Vector3> vertices;
@@ -178,6 +180,7 @@ namespace nv
             vertices = new List<Vector3>();
             triangles = new List<int>();
             normals = new Vector3[0];
+            vertHasWall = new Dictionary<int, int>();
 
             rowCacheMax = new int[ChunkSize.x * 2 + 1];
             rowCacheMin = new int[ChunkSize.x * 2 + 1];
@@ -197,6 +200,7 @@ namespace nv
                 objectRenderers.Clear();
             }
 
+            vertHasWall.Clear();
             vertices.Clear();
             triangles.Clear();
 
@@ -445,6 +449,12 @@ namespace nv
             {
                 vertices[vertex] = summation;
             }
+
+            if(Wall != null && vertHasWall.ContainsKey(vertex))
+            {
+                int wallVertex = vertHasWall[vertex];// WallIndex(vertex);
+                Wall.SetWallVertex(wallVertex, new Vector2(vertices[vertex].x, vertices[vertex].z));
+            }
         }
 
         void CalculateSimpleUVs()
@@ -524,10 +534,13 @@ namespace nv
         {
             if(a != null && elementEvaluator.IsMeshElement(a))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 rowCacheMax[0] = vertices.Count;
                 vertices.Add(new Vector3(pos.x,0f,pos.y));
                 if(Wall != null)
                     Wall.CacheXEdge(WallIndex(0), new Vector3(pos.x, 0f, pos.y));
+
             }
         }
 
@@ -535,6 +548,8 @@ namespace nv
         {
             if(a != null && elementEvaluator.IsMeshElement(a))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 Vector3 wpos = new Vector3(pos.x, 0f, pos.y);
                 rowCacheMax[0] = vertices.Count;
                 vertices.Add(wpos + offset);
@@ -550,6 +565,8 @@ namespace nv
             Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
             if(hasMeshElement && !IsEqual(xMin, xMax))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 rowCacheMax[i + 1] = vertices.Count;
                 vertices.Add(ToEdgePosX(wposMin));
                 if(Wall != null)
@@ -569,6 +586,8 @@ namespace nv
             Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
             if(hasMeshElement && !IsEqual(xMin, xMax))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 rowCacheMax[i + 1] = vertices.Count;
                 vertices.Add(ToEdgePosX(wposMin));
                 if(Wall != null)
@@ -588,6 +607,8 @@ namespace nv
             Vector3 wposMax = new Vector3(maxPos.x, 0f, maxPos.y);
             if(hasMeshElement && !IsEqual(xMin, xMax))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 rowCacheMax[i + 1] = vertices.Count;
                 vertices.Add(ToEdgePosX(wposMin) + minOffset);
                 if(Wall != null)
@@ -609,6 +630,8 @@ namespace nv
                 Wall.PrepareCacheForNextCell();
             if(hasMeshElement && !IsEqual(yMin, yMax))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 edgeCacheMax = vertices.Count;
                 vertices.Add(ToEdgePosY(wposMin));
                 if(Wall != null)
@@ -625,6 +648,8 @@ namespace nv
                 Wall.PrepareCacheForNextCell();
             if(hasMeshElement && !IsEqual(yMin, yMax))
             {
+                if(Wall != null)
+                    vertHasWall.Add(vertices.Count, Wall.VertexCount);
                 edgeCacheMax = vertices.Count;
                 vertices.Add(ToEdgePosY(wposMin) + offset);
                 if(Wall != null)

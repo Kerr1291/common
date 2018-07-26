@@ -33,6 +33,14 @@ namespace nv
         [HideInInspector]
         List<Vector3> vertices;
 
+        public int VertexCount
+        {
+            get
+            {
+                return vertices.Count;
+            }
+        }
+
         [SerializeField]
         [HideInInspector]
         Vector3[] normals;
@@ -151,6 +159,18 @@ namespace nv
             } while(t != 0);
             
             mesh.normals = normals;
+        }
+
+        public void MoveWallVertex(int i, Vector2 delta)
+        {
+            vertices[i] = new Vector3(vertices[i].x + delta.x, vertices[i].y, vertices[i].z + delta.y);
+            vertices[i + 1] = new Vector3(vertices[i + 1].x + delta.x, vertices[i + 1].y, vertices[i + 1].z + delta.y);
+        }
+
+        public void SetWallVertex(int i, Vector2 update)
+        {
+            vertices[i] = new Vector3(update.x, vertices[i].y, update.y);
+            vertices[i + 1] = new Vector3(update.x, vertices[i + 1].y, update.y);
         }
 
         public void CacheXEdge(int i, Vector3 e)
