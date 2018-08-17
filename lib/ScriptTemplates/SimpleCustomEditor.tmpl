@@ -1,0 +1,23 @@
+#if UNITY_EDITOR
+using UnityEngine;
+using UnityEditor;
+namespace CUSTOMNAMESPACE
+{
+    [CustomEditor(typeof(CUSTOMTYPE))]
+    public class CUSTOMTYPE_Editor : Editor
+    {
+        CUSTOMTYPE Target
+        {
+            get
+            {
+                return ((CUSTOMTYPE)target);
+            }
+        }
+
+        public override void OnInspectorGUI()
+        {            
+            base.OnInspectorGUI();
+        }
+    }
+}
+#endif

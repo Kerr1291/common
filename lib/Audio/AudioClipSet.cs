@@ -2,107 +2,6 @@
 using System.Collections.Generic;
 using System.Collections;
 
-//#if UNITY_EDITOR
-//using UnityEditor;
-//using System.Reflection;
-//namespace nv.editor
-//{
-//    [CanEditMultipleObjects]
-//    [CustomEditor(typeof(AudioClipSet))]
-//    public class AudioClipSet_Editor : Editor
-//    {
-//        public override void OnInspectorGUI()
-//        {
-//            AudioClipSet localTarget = target as AudioClipSet;
-
-//            localTarget = (AudioClipSet)target;
-//            EditorGUILayout.BeginHorizontal();
-//            if(GUILayout.Button("Play"))
-//            {
-//                if(Application.isPlaying)
-//                    localTarget.Play();
-//                else
-//                {
-//                    StopAllClips();
-//                    PlayClip(localTarget.Source.clip);
-//                }
-//            }
-
-//            string stopButtonText = "";
-//            if(Application.isPlaying)
-//                stopButtonText = "Stop";
-//            else
-//                stopButtonText = "Stop All Clips";
-
-//            if(GUILayout.Button(stopButtonText))
-//            {
-//                if(Application.isPlaying)
-//                    localTarget.Stop();
-//                else
-//                    StopAllClips();
-//            }
-//            EditorGUILayout.EndHorizontal();
-
-//            if(Application.isPlaying)
-//            {
-//                EditorGUI.BeginDisabledGroup(true);
-//                EditorGUILayout.Toggle("IsPlaying?", localTarget.Source.isPlaying);
-//                EditorGUI.EndDisabledGroup();
-//            }
-
-//            if(localTarget != null)
-//            {
-//                localTarget.CurrentIndex = EditorGUILayout.DelayedIntField("Current Index",localTarget.CurrentIndex);
-//            }
-//            base.OnInspectorGUI();
-//        }
-//        ////////
-//        ///The code snippets below allow for sounds to be played in editor mode.
-//        ///Code from: https://forum.unity3d.com/threads/way-to-play-audio-in-editor-using-an-editor-script.132042/
-//        ///
-
-//        public static void PlayClip(AudioClip clip)
-//        {
-//            if(clip == null)
-//                return;
-
-//            Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
-//            System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
-//            MethodInfo method = audioUtilClass.GetMethod(
-//                "PlayClip",
-//                BindingFlags.Static | BindingFlags.Public,
-//                null,
-//                new System.Type[] {
-//                typeof(AudioClip)
-//            },
-//                null
-//            );
-
-//            method.Invoke(null, new object[] { clip });
-//        }
-
-//        public static void StopAllClips()
-//        {
-//            Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
-//            System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
-//            MethodInfo method = audioUtilClass.GetMethod(
-//                "StopAllClips",
-//                BindingFlags.Static | BindingFlags.Public,
-//                null,
-//                new System.Type[] { },
-//                null
-//            );
-
-//            method.Invoke(null, new object[] { });
-//        }
-//        ///
-//        ///End imported code.
-//        ////////
-//    }
-
-//}
-//#endif
-
 namespace nv
 {
     [RequireComponent(typeof(AudioSource))]
@@ -348,3 +247,108 @@ namespace nv
         }        
     }
 }
+
+
+
+
+
+//#if UNITY_EDITOR
+//using UnityEditor;
+//using System.Reflection;
+//namespace nv.editor
+//{
+//    [CanEditMultipleObjects]
+//    [CustomEditor(typeof(AudioClipSet))]
+//    public class AudioClipSet_Editor : Editor
+//    {
+//        public override void OnInspectorGUI()
+//        {
+//            AudioClipSet localTarget = target as AudioClipSet;
+
+//            localTarget = (AudioClipSet)target;
+//            EditorGUILayout.BeginHorizontal();
+//            if(GUILayout.Button("Play"))
+//            {
+//                if(Application.isPlaying)
+//                    localTarget.Play();
+//                else
+//                {
+//                    StopAllClips();
+//                    PlayClip(localTarget.Source.clip);
+//                }
+//            }
+
+//            string stopButtonText = "";
+//            if(Application.isPlaying)
+//                stopButtonText = "Stop";
+//            else
+//                stopButtonText = "Stop All Clips";
+
+//            if(GUILayout.Button(stopButtonText))
+//            {
+//                if(Application.isPlaying)
+//                    localTarget.Stop();
+//                else
+//                    StopAllClips();
+//            }
+//            EditorGUILayout.EndHorizontal();
+
+//            if(Application.isPlaying)
+//            {
+//                EditorGUI.BeginDisabledGroup(true);
+//                EditorGUILayout.Toggle("IsPlaying?", localTarget.Source.isPlaying);
+//                EditorGUI.EndDisabledGroup();
+//            }
+
+//            if(localTarget != null)
+//            {
+//                localTarget.CurrentIndex = EditorGUILayout.DelayedIntField("Current Index",localTarget.CurrentIndex);
+//            }
+//            base.OnInspectorGUI();
+//        }
+//        ////////
+//        ///The code snippets below allow for sounds to be played in editor mode.
+//        ///Code from: https://forum.unity3d.com/threads/way-to-play-audio-in-editor-using-an-editor-script.132042/
+//        ///
+
+//        public static void PlayClip(AudioClip clip)
+//        {
+//            if(clip == null)
+//                return;
+
+//            Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
+//            System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
+//            MethodInfo method = audioUtilClass.GetMethod(
+//                "PlayClip",
+//                BindingFlags.Static | BindingFlags.Public,
+//                null,
+//                new System.Type[] {
+//                typeof(AudioClip)
+//            },
+//                null
+//            );
+
+//            method.Invoke(null, new object[] { clip });
+//        }
+
+//        public static void StopAllClips()
+//        {
+//            Assembly unityEditorAssembly = typeof(AudioImporter).Assembly;
+//            System.Type audioUtilClass = unityEditorAssembly.GetType("UnityEditor.AudioUtil");
+//            MethodInfo method = audioUtilClass.GetMethod(
+//                "StopAllClips",
+//                BindingFlags.Static | BindingFlags.Public,
+//                null,
+//                new System.Type[] { },
+//                null
+//            );
+
+//            method.Invoke(null, new object[] { });
+//        }
+//        ///
+//        ///End imported code.
+//        ////////
+//    }
+
+//}
+//#endif

@@ -159,7 +159,7 @@ namespace nv
         public void CreateChunks()
         {
             //Vector2Int center = Vector2Int.FloorToInt(new Vector2(MapSize.x, MapSize.y) * .5f);
-
+            
             chunks = new List<MapMesh>();
             chunkViews = new List<GameObject>();
 

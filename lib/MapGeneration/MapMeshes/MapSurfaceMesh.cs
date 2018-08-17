@@ -388,8 +388,6 @@ namespace nv
 
         void SmoothVertex(int vertex, float skip_height = 0f, bool skip_seams = true)
         {
-            //TODO: need to smooth the vertices (x and z positions) that match wall vertices
-
             Vector3 vertexToSmooth = vertices[vertex];
 
             //don't smooth vertices near this value, useful for retaining 'nice' seams
@@ -433,8 +431,6 @@ namespace nv
                 }
             }
 
-            //summation += vertices[ vertex ];
-
             summation = summation * (1f / (neighbors.Count));
             if(xSeam || zSeam)
             {
@@ -452,7 +448,7 @@ namespace nv
 
             if(Wall != null && vertHasWall.ContainsKey(vertex))
             {
-                int wallVertex = vertHasWall[vertex];// WallIndex(vertex);
+                int wallVertex = vertHasWall[vertex];
                 Wall.SetWallVertex(wallVertex, new Vector2(vertices[vertex].x, vertices[vertex].z));
             }
         }

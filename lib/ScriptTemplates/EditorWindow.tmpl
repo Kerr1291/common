@@ -1,0 +1,70 @@
+﻿#if UNITY_EDITOR
+using UnityEngine;
+using UnityEditor;
+
+namespace CUSTOMNAMESPACE
+{
+    public class CUSTOMTYPE_Window : EditorWindow
+    {
+        static Rect windowDimensions = new Rect(200f, 200f, 800f, 600f);
+        const bool openWindowAtMouse = false;
+        
+        [MenuItem(Consts.MENU_ROOT + "/Window/CUSTOMTYPE Window")]
+        static void OpenEditorWindow()
+        {
+            CUSTOMTYPE_Window window = (CUSTOMTYPE_Window)EditorWindow.GetWindow<CUSTOMTYPE_Window>();
+            window.titleContent = new GUIContent("CUSTOMTYPE");
+            window.position = windowDimensions;
+            window.ShowUtility();
+        }
+
+        void DrawWindowGUI()
+        {
+            if(GUILayout.Button("Do Nothing", GUILayout.MaxWidth(120)))
+            {
+                //Example empty button
+            }
+        }
+
+        void OnGUI()
+        {
+            if(openWindowAtMouse)
+                this.position = new Rect(GUIUtility.GUIToScreenPoint(Event.current.mousePosition), new Vector2(windowDimensions.width, windowDimensions.height));
+
+            EditorGUILayout.LabelField("CUSTOMTYPE Window", EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField("", EditorStyles.wordWrappedLabel);
+            GUILayout.Space(5);
+
+            DrawWindowGUI();
+
+            if(GUILayout.Button("Close", GUILayout.MaxWidth(120)))
+            {
+                this.Close();
+            }
+
+            CheckKeyboardInput();
+        }
+
+        void HandleKeyboardInput(KeyCode keyPressed)
+        {
+            if(Event.current.keyCode == (KeyCode.Escape))
+            {
+                this.Close();
+            }
+        }
+
+        void CheckKeyboardInput()
+        {
+            Event e = Event.current;
+            switch(e.type)
+            {
+                case EventType.KeyDown:
+                    {
+                        HandleKeyboardInput(Event.current.keyCode);
+                        break;
+                    }
+            }
+        }
+    }
+}
+#endif

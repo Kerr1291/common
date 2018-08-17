@@ -661,20 +661,27 @@ namespace nv
 
 		public override void OnInspectorGUI()
 		{
-			if (InspectorGUIStart(alwaysDrawInspector) == false)
-				return;
+            try
+            {
+                if(InspectorGUIStart(alwaysDrawInspector) == false)
+                    return;
 
-			EditorGUI.BeginChangeCheck();
+                EditorGUI.BeginChangeCheck();
 
-			DrawInspector();
+                DrawInspector();
 
-			if (EditorGUI.EndChangeCheck())
-			{
-				serializedObject.ApplyModifiedProperties();
-				InitInspector(true);
-			}
+                if(EditorGUI.EndChangeCheck())
+                {
+                    serializedObject.ApplyModifiedProperties();
+                    InitInspector(true);
+                }
 
-			DrawContextMenuButtons();
+                DrawContextMenuButtons();
+            }
+            //Sometimes thrown when a new scriptable singleton is auto-generated mid-inspector draw. 
+            //It's just noise and doesn't cause any problems so hide it and let things continue on.
+            catch(StackOverflowException)
+            { }
 		}
 
 		protected enum IterControl
@@ -713,15 +720,7 @@ namespace nv
                 } while(property.NextVisible(true));
             }
 		}
-
-        //TODO: fix this hack so it doesn't reference the application controls, but instead an editor scriptable object....
-        Dictionary<string, int> typeSelection
-        {
-            get
-            {
-                return ApplicationControls.Instance.typeSelection;
-            }
-        }
+        
 
         /// <summary>
         /// Draw a SerializedProperty as a ReorderableList if it was found during
@@ -783,10 +782,15 @@ namespace nv
 
                                 if(subclasses.Count > 0)
                                 {
-                                    if(!typeSelection.ContainsKey(property.propertyPath))
-                                        typeSelection.Add(property.propertyPath, 0);
-                                    typeSelection[property.propertyPath] = EditorGUILayout.Popup(typeSelection[property.propertyPath], subclasses.Select(x => x.Name).ToArray());
-                                    //Dev.LogVar(typeSelection[property.propertyPath]);
+                                    string keyname = this.GetType().Name + target.name;
+                                    if(!nv.editor.EditorData.Instance.HasData<int>(keyname, property.propertyPath))
+                                    {
+                                        nv.editor.EditorData.Instance.SetData<int>(0, keyname, property.propertyPath);
+                                    }
+
+                                    int selection = nv.editor.EditorData.Instance.GetData<int>(keyname, property.propertyPath);
+                                    selection = EditorGUILayout.Popup(selection, subclasses.Select(x => x.Name).ToArray());
+                                    nv.editor.EditorData.Instance.SetData<int>(selection, keyname, property.propertyPath);
                                 }
 
                                 if(hasSpace) GUILayout.Space(10);
@@ -796,17 +800,24 @@ namespace nv
 					}
 
 					if (doCreate)
-					{
-						Type propType = property.GetTypeReflection();
+                    {
+                        string keyname = this.GetType().Name + target.name;
+                        Type propType = property.GetTypeReflection();
                         if(subclasses.Count > 0)
                         {
-                            propType = subclasses[typeSelection[property.propertyPath]];
+                            int selection = nv.editor.EditorData.Instance.GetData<int>(keyname, property.propertyPath);
+                            propType = subclasses[selection];
                         }
 
-						var createdAsset = CreateAssetWithSavePrompt(propType, "Assets");
+                        string pwd = nv.editor.EditorData.Instance.GetData<string>(keyname, property.propertyPath);
+                        if(string.IsNullOrEmpty(pwd))
+                            pwd = Application.dataPath;
+
+						var createdAsset = CreateAssetWithSavePrompt(propType, ref pwd);
 						if (createdAsset != null)
 						{
-							property.objectReferenceValue = createdAsset;
+                            nv.editor.EditorData.Instance.SetData<string>(pwd, keyname, property.propertyPath);
+                            property.objectReferenceValue = createdAsset;
 							property.isExpanded = true;
 						}
 					}
@@ -858,9 +869,12 @@ namespace nv
         }
 
 		// Creates a new ScriptableObject via the default Save File panel
-		private ScriptableObject CreateAssetWithSavePrompt(Type type, string path)
-		{
-			path = EditorUtility.SaveFilePanelInProject("Save ScriptableObject", "New " + type.Name + ".asset", "asset", "Enter a file name for the ScriptableObject.", path);
+		private ScriptableObject CreateAssetWithSavePrompt(Type type, ref string path)
+        {
+            string[] foundAssets = AssetDatabase.FindAssets(type.Name);
+            string count_as_int = foundAssets.Length.ToString().PadLeft(3, '0');
+
+            path = EditorUtility.SaveFilePanelInProject("Save ScriptableObject", "" + type.Name + "_" + count_as_int + ".asset", "asset", "Enter a file name for the ScriptableObject.", path);
 			if (path == "") return null;
 			ScriptableObject asset = ScriptableObject.CreateInstance(type);
 			AssetDatabase.CreateAsset(asset, path);

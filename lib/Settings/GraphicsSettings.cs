@@ -10,46 +10,23 @@ using UnityEditor;
 
 namespace nv
 {
-    public class GraphicsSettings : ScriptableObject
+    public class GraphicsSettings : ScriptableSingleton<GraphicsSettings>
     {
-#if UNITY_EDITOR
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/Assets/Create Graphics Settings")]
-        public static void CreateApplicationControls()
+        public static void Create()
         {
-            ApplicationControls asset = ScriptableObject.CreateInstance<ApplicationControls>();
-
-            AssetDatabase.CreateAsset(asset, "Assets/Resources/GraphicsSettings.asset");
-            AssetDatabase.SaveAssets();
-
-            EditorUtility.FocusProjectWindow();
-
-            Selection.activeObject = asset;
+            CreateEditorInstance();
         }
-#endif
-        [SerializeField]
-        bool vsyncEnabled;
 
         public bool VSync
         {
             get
             {
-                vsyncEnabled = QualitySettings.vSyncCount > 0;
-                return vsyncEnabled;
+                return QualitySettings.vSyncCount > 0;
             }
             set
             {
-                vsyncEnabled = value;
-                if(vsyncEnabled)
-                    QualitySettings.vSyncCount = 1;
-                else
-                    QualitySettings.vSyncCount = 0;
+                QualitySettings.vSyncCount = value ? 1 : 0;
             }
-        }
-
-        //setup the property values to match the values that were set in the inspector
-        public void Init()
-        {
-            VSync = vsyncEnabled;
         }
     }
 }
