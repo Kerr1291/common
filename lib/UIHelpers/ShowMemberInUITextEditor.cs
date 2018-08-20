@@ -5,80 +5,80 @@ using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
 
-[CustomEditor(typeof(ShowMemberInUIText))]
-public class ShowMemberInUIText_Editor : Editor
+namespace nv.editor
 {
-    ShowMemberInUIText Target
+    [CustomEditor(typeof(ShowMemberInUIText))]
+    public class ShowMemberInUIText_Editor : Editor
     {
-        get
+        ShowMemberInUIText Target
         {
-            return ((ShowMemberInUIText)target);
-        }
-    }
-
-    public override void OnInspectorGUI()
-    {
-        base.OnInspectorGUI();
-        return;
-
-        Object currentTarget = (Object)Target.GetType().GetField("target", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
-        Object rootTarget = (Object)Target.GetType().GetField("rootTarget", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
-
-        rootTarget = EditorGUILayout.ObjectField("Target Object", rootTarget, typeof(object), true);
-
-        if(rootTarget as GameObject != null)
-        {
-            List<Object> objects = new List<Object>();
-            objects = (rootTarget as GameObject).GetComponents<Component>().Cast<Object>().ToList();
-            objects.Insert(0, rootTarget as GameObject);
-
-            int tarIndex = 0;
-            if(currentTarget != null)
-                tarIndex = objects.Select(x => x != null ? x.GetType().Name : "null").ToList().IndexOf(currentTarget.GetType().Name);
-
-            if(tarIndex < 0)
-                tarIndex = 0;
-
-            tarIndex = EditorGUILayout.Popup("Target Reference", tarIndex, objects.Select(x => x != null ? x.GetType().Name : "null").ToArray());
-
-            currentTarget = objects[tarIndex];
-        }
-        else
-        {
-            currentTarget = rootTarget;
+            get
+            {
+                return ((ShowMemberInUIText)target);
+            }
         }
 
-        Target.GetType().GetField("target", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(Target, currentTarget);
-        Target.GetType().GetField("rootTarget", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(Target, rootTarget);
-
-        if(currentTarget != null)
+        public override void OnInspectorGUI()
         {
-            var publicMembers = currentTarget.GetType().GetMembers().Select(x => x);
-            var nonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.NonPublic).Select(x => x);
-            //var staticMembers = currentTarget.GetType().GetMembers(BindingFlags.Static).Select(x => x);
-            //var staticNonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.Static | BindingFlags.NonPublic).Select(x => x);
+            Object currentTarget = (Object)Target.GetType().GetField("target", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
+            Object rootTarget = (Object)Target.GetType().GetField("rootTarget", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
 
-            var allMembers = publicMembers.Concat(nonpublicMembers).ToList();
-            //allMembers = allMembers.Concat(staticMembers).Concat(staticNonpublicMembers).ToList();
-            var allNonMethods = allMembers.Where(x => (x as MethodInfo) == null).ToList();
+            rootTarget = EditorGUILayout.ObjectField("Target Object", rootTarget, typeof(object), true);
 
-            int memIndex = 0;
+            if(rootTarget as GameObject != null)
+            {
+                List<Object> objects = new List<Object>();
+                objects = (rootTarget as GameObject).GetComponents<Component>().Cast<Object>().ToList();
+                objects.Insert(0, rootTarget as GameObject);
+
+                int tarIndex = 0;
+                if(currentTarget != null)
+                    tarIndex = objects.Select(x => x != null ? x.GetType().Name : "null").ToList().IndexOf(currentTarget.GetType().Name);
+
+                if(tarIndex < 0)
+                    tarIndex = 0;
+
+                tarIndex = EditorGUILayout.Popup("Target Reference", tarIndex, objects.Select(x => x != null ? x.GetType().Name : "null").ToArray());
+
+                currentTarget = objects[tarIndex];
+            }
+            else
+            {
+                currentTarget = rootTarget;
+            }
+
+            Target.GetType().GetField("target", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(Target, currentTarget);
+            Target.GetType().GetField("rootTarget", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(Target, rootTarget);
+
             if(currentTarget != null)
             {
-                SerializableMemberInfo targetRef = (SerializableMemberInfo)Target.GetType().GetField("targetRef", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
+                var publicMembers = currentTarget.GetType().GetMembers().Select(x => x);
+                var nonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.NonPublic).Select(x => x);
+                //var staticMembers = currentTarget.GetType().GetMembers(BindingFlags.Static).Select(x => x);
+                //var staticNonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.Static | BindingFlags.NonPublic).Select(x => x);
 
-                memIndex = allNonMethods.IndexOf(targetRef.Info);
+                var allMembers = publicMembers.Concat(nonpublicMembers).ToList();
+                //allMembers = allMembers.Concat(staticMembers).Concat(staticNonpublicMembers).ToList();
+                var allNonMethods = allMembers.Where(x => (x as MethodInfo) == null).ToList();
 
-                if(memIndex < 0)
-                    memIndex = 0;
+                int memIndex = 0;
+                if(currentTarget != null)
+                {
+                    SerializableMemberInfo targetRef = (SerializableMemberInfo)Target.GetType().GetField("targetRef", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
 
-                var memArrayNames = allNonMethods.Select(x => x.Name).ToArray();
-                var memArray = allNonMethods.ToArray();
+                    memIndex = allNonMethods.IndexOf(targetRef.Info);
 
-                memIndex = EditorGUILayout.Popup("Member", memIndex, memArrayNames);
+                    if(memIndex < 0)
+                        memIndex = 0;
 
-                if(memIndex < memArray.Length)
-                    targetRef.Info = memArray[memIndex];
+                    var memArrayNames = allNonMethods.Select(x => x.Name).ToArray();
+                    var memArray = allNonMethods.ToArray();
+
+                    memIndex = EditorGUILayout.Popup("Member", memIndex, memArrayNames);
+
+                    if(memIndex < memArray.Length)
+                        targetRef.Info = memArray[memIndex];
+                }
             }
         }
     }
