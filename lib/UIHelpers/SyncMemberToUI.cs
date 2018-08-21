@@ -40,7 +40,13 @@ namespace nv
 
         void GetUnityUIComponent()
         {
-            uiElement = GetComponents<UIBehaviour>().Where(x => (x as Text != null) || (x as InputField != null) || (x as Slider != null) || (x as Toggle != null) || (x as Scrollbar != null) || (x as Dropdown != null)).FirstOrDefault();
+            uiElement = GetComponents<UIBehaviour>().Where(x => 
+            (x as Text != null) || 
+            (x as InputField != null) || 
+            (x as Slider != null) || 
+            (x as Toggle != null) || 
+            (x as Scrollbar != null) || 
+            (x as Dropdown != null)).FirstOrDefault();
         }
 
         void LateUpdate()
@@ -51,10 +57,44 @@ namespace nv
 
         void SetValueFromInputText(string value)
         {
-            Dev.LogVar(value); 
-            if(targetRef.GetValue<string>(target) == value)
+            object currentValue = targetRef.GetValue(target);
+            if(currentValue.ToString() == value)
                 return;
-            targetSetRef.SetValue(target, value);
+
+            var element = uiElement as InputField;
+
+            int? ivalue = null;
+            float? fvalue = null;
+
+            if(element.contentType == InputField.ContentType.DecimalNumber)
+                fvalue = System.Convert.ToSingle(value);
+            else if(element.contentType == InputField.ContentType.IntegerNumber)
+                ivalue = System.Convert.ToInt32(value);
+            else if(element.contentType == InputField.ContentType.Pin)
+                ivalue = System.Convert.ToInt32(value);
+            else
+            {
+                try
+                {
+                    ivalue = System.Convert.ToInt32(value);
+                }
+                catch(System.Exception)
+                { }
+
+                try
+                {
+                    fvalue = System.Convert.ToSingle(value);
+                }
+                catch(System.Exception)
+                { }
+            }
+
+            if(ivalue != null && ivalue.HasValue)
+                targetSetRef.SetValue(target, ivalue.Value);
+            else if(fvalue != null && fvalue.HasValue)
+                targetSetRef.SetValue(target, fvalue.Value);
+            else
+                targetSetRef.SetValue(target, value);
         }
 
         void SetValueFromToggle(bool value)

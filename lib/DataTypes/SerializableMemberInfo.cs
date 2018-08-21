@@ -31,10 +31,10 @@ namespace nv
 
                     if(string.IsNullOrEmpty(memberName) || !targetType.GetMembers(bFlags).Select(x => x.Name).Contains(memberName))
                     {
-                        Dev.Log("Member " + memberName + " does not exist in target type " + typeName + " in assembly " + typeAssemblyName);
-                        Dev.LogVar(bFlags);
-                        Dev.LogVar(targetType.GetMembers(bFlags).Length);
-                        Dev.LogVarArray("Member list", targetType.GetMembers(bFlags));
+                        //Dev.Log("Member " + memberName + " does not exist in target type " + typeName + " in assembly " + typeAssemblyName);
+                        //Dev.LogVar(bFlags);
+                        //Dev.LogVar(targetType.GetMembers(bFlags).Length);
+                        //Dev.LogVarArray("Member list", targetType.GetMembers(bFlags));
                         return null;
                     }
 
@@ -46,7 +46,6 @@ namespace nv
                     }
                     if(info == null && methodParameters != null)
                     {
-                        Dev.LogVarArray("params", methodParameters.Select(x => x.Data).Where(x => x != null).ToArray()); 
                         info = targetType.GetMethod(memberName, methodParameters.Select(x=>x.Data).Where(x => x != null).ToArray() );
                     } 
                 }
@@ -78,21 +77,23 @@ namespace nv
 
         public object GetValue(object instance)
         {
-            var fi = Info as FieldInfo;
+            MemberInfo minfo = Info;
+            var fi = minfo as FieldInfo;
             if(fi != null)
             {
                 object targetValue = fi.GetValue(instance);
                 return targetValue;
             }
-            var pi = Info as PropertyInfo;
+            var pi = minfo as PropertyInfo;
             if(pi != null)
             {
                 object targetValue = pi.GetValue(instance);
                 return targetValue;
             }
-            var mi = Info as MethodInfo;
+            var mi = minfo as MethodInfo;
             if(mi != null) 
             {
+                //TODO: wrap in a try/catch in edit mode so we don't get spammed with errors
                 object targetValue = mi.Invoke(instance,null);
                 return targetValue;
             }
@@ -101,19 +102,20 @@ namespace nv
 
         public T GetValue<T>(object instance)
         {
-            var fi = Info as FieldInfo;
+            MemberInfo minfo = Info;
+            var fi = minfo as FieldInfo;
             if(fi != null)
             {
                 T targetValue = (T)fi.GetValue(instance);
                 return targetValue;
             }
-            var pi = Info as PropertyInfo;
+            var pi = minfo as PropertyInfo;
             if(pi != null)
             {
                 T targetValue = (T)pi.GetValue(instance);
                 return targetValue;
             }
-            var mi = Info as MethodInfo;
+            var mi = minfo as MethodInfo;
             if(mi != null)
             {
                 T targetValue = (T)mi.Invoke(instance, null);
@@ -125,17 +127,19 @@ namespace nv
 
         public void SetValue(object instance, object value)
         {
-            var fi = Info as FieldInfo;
+            MemberInfo minfo = Info;
+            Debug.Log(minfo);
+            var fi = minfo as FieldInfo;
             if(fi != null)
             {
                 fi.SetValue(instance, value);
             }
-            var pi = Info as PropertyInfo;
+            var pi = minfo as PropertyInfo;
             if(pi != null)
             {
                 pi.SetValue(instance, value);
             }
-            var mi = Info as MethodInfo;
+            var mi = minfo as MethodInfo;
             if(mi != null)
             {
                 mi.Invoke(instance, new object[] { value });
@@ -191,6 +195,8 @@ namespace nv
                         UnityEngine.Debug.LogWarning("Did not find type " + typeName);
                         return null;
                     }
+
+                    data = targetType;
                 }
 
                 return data;
