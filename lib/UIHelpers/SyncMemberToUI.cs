@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 using UnityEngine.EventSystems;
+using System.Reflection;
 
 namespace nv
 {
@@ -47,6 +48,34 @@ namespace nv
             (x as Toggle != null) || 
             (x as Scrollbar != null) || 
             (x as Dropdown != null)).FirstOrDefault();
+        }
+
+        List<MemberInfo> FilterMembersByType<T>(List<MemberInfo> allMembers)
+        {
+            var fields = allMembers.OfType<FieldInfo>().Cast<FieldInfo>().Where(x => x.FieldType == typeof(T)).Cast<MemberInfo>();
+            //Dev.LogVarArray("fields", fields.ToList());
+            var props = allMembers.OfType<PropertyInfo>().Cast<PropertyInfo>().Where(x => x.PropertyType == typeof(T)).Cast<MemberInfo>();
+            //Dev.LogVarArray("props", fields.ToList());
+            var methods = allMembers.OfType<MethodInfo>().Cast<MethodInfo>().Where(x => (x.ReturnType == typeof(T)) || (x.GetParameters().Length > 0 && x.GetParameters()[0].ParameterType == typeof(T))).Cast<MemberInfo>();
+            //Dev.LogVarArray("methods", fields.ToList());
+            return fields.Concat(props).Concat(methods).ToList();
+        }
+
+        public List<MemberInfo> FilterAllowedMembersByUIType(List<MemberInfo> allMembers)
+        {
+            if(uiElement as Text != null)
+                return allMembers;
+            if(uiElement as InputField != null)
+                return allMembers;
+            if(uiElement as Slider != null)
+                return FilterMembersByType<float>(allMembers).Concat(FilterMembersByType<int>(allMembers)).ToList();
+            if(uiElement as Toggle != null)
+                return FilterMembersByType<bool>(allMembers).ToList();
+            if(uiElement as Scrollbar != null)
+                return FilterMembersByType<float>(allMembers).ToList();
+            if(uiElement as Dropdown != null)
+                return FilterMembersByType<int>(allMembers).ToList();
+            return allMembers;
         }
 
         void LateUpdate()
@@ -99,7 +128,7 @@ namespace nv
 
         void SetValueFromToggle(bool value)
         {
-            Dev.LogVar(value);
+            //Dev.LogVar(value);
             if(targetRef.GetValue<bool>(target) == value)
                 return;
 
@@ -108,7 +137,7 @@ namespace nv
 
         void SetValueFromSliderOrScrollbar(float value)
         {
-            Dev.LogVar(value);
+            //Dev.LogVar(value);
             if(targetRef.GetValue<float>(target) == value)
                 return;
 
@@ -117,7 +146,7 @@ namespace nv
 
         void SetValueFromDropdown(int value)
         {
-            Dev.LogVar(value);
+            //Dev.LogVar(value);
             if(targetRef.GetValue<int>(target) == value)
                 return;
 
@@ -126,7 +155,7 @@ namespace nv
 
         void RegisterUICallbacks()
         {
-            Dev.LogVar(uiElement.GetType().Name);
+            //Dev.LogVar(uiElement.GetType().Name);
             {//Input field
                 var element = uiElement as InputField;
                 if(element != null)
@@ -171,6 +200,9 @@ namespace nv
 
         void UpdateUIValue()
         {
+            if(target != null && targetRef.Info != null && targetRef.Info.DeclaringType != target.GetType())
+                return;
+
             object targetValue = targetRef.GetValue(target);
             if(targetValue != null)
             {
@@ -196,7 +228,6 @@ namespace nv
                     if(element != null)
                     {
                         bool success = false;
-                        //try casting it to each primitive type that could go in a slider
                         if(!success)
                         {
                             try

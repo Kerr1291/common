@@ -30,13 +30,7 @@ namespace nv
                     }
 
                     if(string.IsNullOrEmpty(memberName) || !targetType.GetMembers(bFlags).Select(x => x.Name).Contains(memberName))
-                    {
-                        //Dev.Log("Member " + memberName + " does not exist in target type " + typeName + " in assembly " + typeAssemblyName);
-                        //Dev.LogVar(bFlags);
-                        //Dev.LogVar(targetType.GetMembers(bFlags).Length);
-                        //Dev.LogVarArray("Member list", targetType.GetMembers(bFlags));
                         return null;
-                    }
 
                     info = targetType.GetField(memberName, bFlags);
 
@@ -74,7 +68,7 @@ namespace nv
                 }
             }
         }
-
+         
         public object GetValue(object instance)
         {
             MemberInfo minfo = Info;
@@ -128,7 +122,6 @@ namespace nv
         public void SetValue(object instance, object value)
         {
             MemberInfo minfo = Info;
-            Debug.Log(minfo);
             var fi = minfo as FieldInfo;
             if(fi != null)
             {
@@ -162,9 +155,6 @@ namespace nv
 
         [SerializeField]
         SerializableSystemType[] methodParameters;
-
-        [SerializeField]
-        int internalMemberIndex;
     }
 
 

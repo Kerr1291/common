@@ -54,11 +54,8 @@ namespace nv.editor
             {
                 var publicMembers = currentTarget.GetType().GetMembers().Select(x => x);
                 var nonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.NonPublic).Select(x => x);
-                //var staticMembers = currentTarget.GetType().GetMembers(BindingFlags.Static).Select(x => x);
-                //var staticNonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.Static | BindingFlags.NonPublic).Select(x => x);
 
                 var allMembers = publicMembers.Concat(nonpublicMembers).ToList();
-                //allMembers = allMembers.Concat(staticMembers).Concat(staticNonpublicMembers).ToList();
                 var allNonMethods = allMembers.Where(x => (x as MethodInfo) == null).ToList();
 
                 int memIndex = 0;

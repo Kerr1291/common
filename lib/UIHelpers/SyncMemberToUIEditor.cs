@@ -62,40 +62,48 @@ namespace nv.editor
             {
                 var publicMembers = currentTarget.GetType().GetMembers(BindingFlags.Public | BindingFlags.Instance).Select(x => x);
                 var nonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Instance).Select(x => x);
-                //var staticMembers = currentTarget.GetType().GetMembers(BindingFlags.Static).Select(x => x);
-                //var staticNonpublicMembers = currentTarget.GetType().GetMembers(BindingFlags.Static | BindingFlags.NonPublic).Select(x => x);
 
                 var allMembers = publicMembers.Concat(nonpublicMembers).ToList();
-                //allMembers = allMembers.Concat(staticMembers).Concat(staticNonpublicMembers).ToList();
-                //var allNonMethods = allMembers.Where(x => (x as MethodInfo) == null).Where(x => x.GetCustomAttribute(typeof(ObsoleteAttribute)) == null).ToList();
                 allMembers = allMembers.Where(x => x.GetCustomAttribute(typeof(ObsoleteAttribute)) == null).ToList();
-                allMembers = allMembers.Where(x => ((x as MethodInfo) == null) || (((x as MethodInfo) != null) && !((x as MethodInfo).IsSpecialName))).ToList();
+                allMembers = allMembers.Where(x => ((x as MethodInfo) == null) || (((x as MethodInfo) != null) && !((x as MethodInfo).IsSpecialName) && !((x as MethodInfo).ContainsGenericParameters))).ToList();
 
-                DrawTargetRefUI(currentTarget, allMembers, "Get-Member", "targetRef");
+                var getterMembers = allMembers.Where(x => ((x as MethodInfo) == null) || (((x as MethodInfo) != null) && ((x as MethodInfo).GetParameters().Length == 0) && ((x as MethodInfo).ReturnType != typeof(void)))).ToList();
+
+                getterMembers = Target.FilterAllowedMembersByUIType(getterMembers);
+
+                if(getterMembers.Count <= 0)
+                    EditorGUILayout.LabelField("No valid Types or Get-Methods on Target Reference");
+                else
+                    DrawTargetRefUI(currentTarget, getterMembers, "Get-Member", "targetRef", true);
 
                 var uiElement = (Object)Target.GetType().GetField("uiElement", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
 
-                if(uiElement as UnityEngine.UI.Text == null) 
+                if(uiElement as UnityEngine.UI.Text == null)
                 {
-                    DrawTargetRefUI(currentTarget, allMembers, "Set-Member", "targetSetRef");
+                    var setterMembers = allMembers.Where(x => ((x as MethodInfo) == null) || (((x as MethodInfo) != null) && ((x as MethodInfo).GetParameters().Length == 1))).ToList();
+
+                    setterMembers = Target.FilterAllowedMembersByUIType(setterMembers);
+
+                    if(setterMembers.Count <= 0)
+                        EditorGUILayout.LabelField("No valid Types or Set-Methods on Target Reference");
+                    else
+                        DrawTargetRefUI(currentTarget, setterMembers, "Set-Member", "targetSetRef", false);
                 }
             } 
         }
 
-        void DrawTargetRefUI(Object currentTarget, List<MemberInfo> allMembers, string label, string fieldName)
-        { 
+        void DrawTargetRefUI(Object currentTarget, List<MemberInfo> allMembers, string label, string fieldName, bool isGetter)
+        {           
             int memIndex = 0; 
             if(currentTarget != null)
             {
                 SerializableMemberInfo targetRef = (SerializableMemberInfo)Target.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Target);
-                
+
                 memIndex = allMembers.IndexOf(targetRef.Info);
 
                 if(memIndex < 0)
                 {
-                    memIndex = (int)targetRef.GetType().GetField("internalMemberIndex", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(targetRef);
-                    if(memIndex < 0)
-                        memIndex = 0;
+                    memIndex = 0;
                 }
 
                 var memArrayNames = allMembers.Select(x => x.Name).ToArray();
@@ -106,7 +114,6 @@ namespace nv.editor
                 if(memIndex < memArray.Length)
                 {
                     targetRef.Info = memArray[memIndex];
-                    targetRef.GetType().GetField("internalMemberIndex", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(targetRef, memIndex);
                 }
             }
         }
