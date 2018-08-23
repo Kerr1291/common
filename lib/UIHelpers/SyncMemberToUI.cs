@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using System.Linq;
 using UnityEngine.EventSystems;
 using System.Reflection;
+using System;
 
 namespace nv
 {
@@ -13,16 +14,25 @@ namespace nv
     public class SyncMemberToUI : MonoBehaviour
     {
         [SerializeField]
-        Object target;
+        UnityEngine.Object target;
 
         [SerializeField]
-        Object rootTarget;
+        UnityEngine.Object rootTarget;
 
         [SerializeField]
         SerializableMemberInfo targetRef;
 
         [SerializeField]
         SerializableMemberInfo targetSetRef;
+
+        [SerializeField]
+        bool useListSourceRef;
+
+        [SerializeField]
+        bool useListSourceCount;
+
+        [SerializeField]
+        SerializableMemberInfo listSourceRef;
 
         [SerializeField]
         UIBehaviour uiElement;
@@ -41,16 +51,30 @@ namespace nv
 
         void GetUnityUIComponent()
         {
-            uiElement = GetComponents<UIBehaviour>().Where(x => 
-            (x as Text != null) || 
-            (x as InputField != null) || 
-            (x as Slider != null) || 
-            (x as Toggle != null) || 
-            (x as Scrollbar != null) || 
+            uiElement = GetComponents<UIBehaviour>().Where(x =>
+            (x as Text != null) ||
+            (x as InputField != null) ||
+            (x as Slider != null) ||
+            (x as Toggle != null) ||
+            (x as Scrollbar != null) ||
             (x as Dropdown != null)).FirstOrDefault();
         }
 
-        List<MemberInfo> FilterMembersByType<T>(List<MemberInfo> allMembers)
+        public Type GetTypeFromMember(MemberInfo m)
+        {
+            var mi = m as MethodInfo;
+            if(mi != null)
+                return mi.ReturnType;
+            var pi = m as PropertyInfo;
+            if(pi != null)
+                return pi.PropertyType;
+            var fi = m as FieldInfo;
+            if(fi != null)
+                return fi.FieldType;
+            return null;
+        }
+
+        public List<MemberInfo> FilterMembersByType<T>(List<MemberInfo> allMembers)
         {
             var fields = allMembers.OfType<FieldInfo>().Cast<FieldInfo>().Where(x => x.FieldType == typeof(T)).Cast<MemberInfo>();
             //Dev.LogVarArray("fields", fields.ToList());
@@ -200,7 +224,7 @@ namespace nv
 
         void UpdateUIValue()
         {
-            if(target != null && targetRef.Info != null && targetRef.Info.DeclaringType != target.GetType())
+            if(target == null || targetRef.Info == null)
                 return;
 
             object targetValue = targetRef.GetValue(target);
@@ -218,7 +242,6 @@ namespace nv
                         var element = uiElement as InputField;
                         if(element != null && !element.isFocused && stringValue != element.text)
                         {
-                            Dev.LogVar(stringValue);
                             element.text = stringValue;
                         }
                     }
@@ -295,8 +318,83 @@ namespace nv
                     var element = uiElement as Dropdown;
                     if(element != null)
                     {
+                        if(listSourceRef.Info != null && listSourceRef.Info.ReflectedType != target.GetType())
+                            return;
+
+                        if(useListSourceRef)
+                            useListSourceCount = false;
+
                         try
                         {
+                            if(useListSourceCount && listSourceRef.Info != null)
+                            {
+                                int count = (int)listSourceRef.GetValue(target);
+                                if(element.options.Count != count)
+                                {
+                                    element.options = new List<Dropdown.OptionData>();
+
+                                    for(int i = 0; i < count; ++i)
+                                    {
+                                        element.options.Add(new Dropdown.OptionData(i.ToString()));
+                                    }
+                                }
+                            }
+
+                            if(useListSourceRef && listSourceRef.Info != null)
+                            {
+                                if(GetTypeFromMember(listSourceRef.Info).IsArray)
+                                {
+                                    Array data = listSourceRef.GetValue(target) as Array;
+
+                                    if(element.options.Count != data.Length)
+                                    {
+                                        element.options = new List<Dropdown.OptionData>();
+
+                                        foreach(var value in data)
+                                        {
+                                            element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        int i = 0;
+                                        foreach(var value in data)
+                                        {
+                                            element.options[i].text = (value == null ? "null" : value.ToString());
+                                            ++i;
+                                        }
+                                    }
+                                }
+                                else if(GetTypeFromMember(listSourceRef.Info).GetInterfaces().Contains(typeof(IList)))
+                                {
+                                    var listData = listSourceRef.GetValue(target);
+                                    var items = listData.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Instance).Where(x => x as FieldInfo != null && x.Name.Contains("_items")).FirstOrDefault() as FieldInfo;
+                                    var arrayData = items.GetValue(listData);
+
+                                    //get the list's internal data array
+                                    Array data = items.GetValue(listData) as Array;
+
+                                    if(element.options.Count != data.Length)
+                                    {
+                                        element.options = new List<Dropdown.OptionData>();
+
+                                        foreach(var value in data)
+                                        {
+                                            element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        int i = 0;
+                                        foreach(var value in data)
+                                        {
+                                            element.options[i].text = (value == null ? "null" : value.ToString());
+                                            ++i;
+                                        }
+                                    }
+                                }
+                            }
+
                             element.value = (int)targetValue;
                         }
                         catch(System.InvalidCastException)

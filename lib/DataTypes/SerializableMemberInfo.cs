@@ -40,8 +40,8 @@ namespace nv
                     }
                     if(info == null && methodParameters != null)
                     {
-                        info = targetType.GetMethod(memberName, methodParameters.Select(x=>x.Data).Where(x => x != null).ToArray() );
-                    } 
+                        info = targetType.GetMethod(memberName, methodParameters.Select(x => x.Data).Where(x => x != null).ToArray());
+                    }
                 }
 
                 return info;
@@ -50,7 +50,7 @@ namespace nv
             {
                 info = value;
                 if(info != null)
-                { 
+                {
                     typeName = info.ReflectedType.FullName;
                     typeAssemblyName = Assembly.GetAssembly(info.ReflectedType).FullName;
                     memberName = info.Name;
@@ -59,8 +59,8 @@ namespace nv
 
                     if(info as MethodInfo != null)
                     {
-                        methodParameters = (info as MethodInfo).GetParameters().Select(x => new SerializableSystemType( x.ParameterType )).ToArray();
-                    } 
+                        methodParameters = (info as MethodInfo).GetParameters().Select(x => new SerializableSystemType(x.ParameterType)).ToArray();
+                    }
                     else
                     {
                         methodParameters = null;
@@ -68,7 +68,7 @@ namespace nv
                 }
             }
         }
-         
+
         public object GetValue(object instance)
         {
             MemberInfo minfo = Info;
@@ -81,14 +81,18 @@ namespace nv
             var pi = minfo as PropertyInfo;
             if(pi != null)
             {
+#if NET_4_6
                 object targetValue = pi.GetValue(instance);
+#else
+            object targetValue = pi.GetValue(instance, null);
+#endif
                 return targetValue;
             }
             var mi = minfo as MethodInfo;
-            if(mi != null) 
+            if(mi != null)
             {
                 //TODO: wrap in a try/catch in edit mode so we don't get spammed with errors
-                object targetValue = mi.Invoke(instance,null);
+                object targetValue = mi.Invoke(instance, null);
                 return targetValue;
             }
             return null;
@@ -106,7 +110,11 @@ namespace nv
             var pi = minfo as PropertyInfo;
             if(pi != null)
             {
+#if NET_4_6
                 T targetValue = (T)pi.GetValue(instance);
+#else
+            T targetValue = (T)pi.GetValue(instance, null);
+#endif
                 return targetValue;
             }
             var mi = minfo as MethodInfo;
@@ -130,7 +138,11 @@ namespace nv
             var pi = minfo as PropertyInfo;
             if(pi != null)
             {
+#if NET_4_6
                 pi.SetValue(instance, value);
+#else
+            pi.SetValue(instance, value, null);
+#endif
             }
             var mi = minfo as MethodInfo;
             if(mi != null)
