@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Reflection;
 using System.Linq;
-using System.Collections.Generic;
 
 namespace nv
 {
@@ -84,7 +83,7 @@ namespace nv
 #if NET_4_6
                 object targetValue = pi.GetValue(instance);
 #else
-            object targetValue = pi.GetValue(instance, null);
+                object targetValue = pi.GetValue(instance, null);
 #endif
                 return targetValue;
             }
@@ -113,7 +112,7 @@ namespace nv
 #if NET_4_6
                 T targetValue = (T)pi.GetValue(instance);
 #else
-            T targetValue = (T)pi.GetValue(instance, null);
+                T targetValue = (T)pi.GetValue(instance, null);
 #endif
                 return targetValue;
             }
@@ -141,7 +140,7 @@ namespace nv
 #if NET_4_6
                 pi.SetValue(instance, value);
 #else
-            pi.SetValue(instance, value, null);
+                pi.SetValue(instance, value, null);
 #endif
             }
             var mi = minfo as MethodInfo;
@@ -167,59 +166,5 @@ namespace nv
 
         [SerializeField]
         SerializableSystemType[] methodParameters;
-    }
-
-
-    [System.Serializable]
-    public class SerializableSystemType
-    {
-        public SerializableSystemType() { }
-        public SerializableSystemType(System.Type type)
-        {
-            Data = type;
-        }
-
-        public System.Type Data
-        {
-            get
-            {
-                //if the data is lost (which it will be after every time unity rebuilds), rebuild it
-                if(data == null)
-                {
-                    if(string.IsNullOrEmpty(typeAssemblyName))
-                        return null;
-
-                    Assembly typeAssembly = Assembly.Load(typeAssemblyName);
-                    System.Type targetType = typeAssembly.GetType(typeName);
-
-                    if(targetType == null)
-                    {
-                        UnityEngine.Debug.LogWarning("Did not find type " + typeName);
-                        return null;
-                    }
-
-                    data = targetType;
-                }
-
-                return data;
-            }
-            set
-            {
-                data = value;
-                if(data != null)
-                {
-                    typeName = data.FullName;
-                    typeAssemblyName = Assembly.GetAssembly(data).FullName;
-                }
-            }
-        }
-
-        System.Type data;
-
-        [SerializeField]
-        string typeAssemblyName;
-
-        [SerializeField]
-        string typeName;
     }
 }
