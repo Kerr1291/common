@@ -135,7 +135,7 @@ namespace nv
                 yield return mapData.Generate();
             }
 
-            while(mapData.GeneratedMap == null)
+            while(mapData == null || mapData.GeneratedMap == null)
                 yield return null;
 
             CreateChunks();
