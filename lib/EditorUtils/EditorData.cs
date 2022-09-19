@@ -14,6 +14,15 @@ namespace nv.editor
     {
         Dictionary<string, StoredData> storedDataLookup;
 
+        Dictionary<string, StoredData> StoredDataLookup {
+            get {
+                if( storedDataLookup == null )
+                    OnAfterDeserialize();
+                return storedDataLookup;
+            }
+            set => storedDataLookup = value;
+        }
+
         [SerializeField]
         List<string> storedDataKeys;
         [SerializeField]
@@ -22,7 +31,7 @@ namespace nv.editor
         [ContextMenu("Clear Stored Data")]
         public void ClearSavedData()
         {
-            storedDataLookup = new Dictionary<string, StoredData>();
+            StoredDataLookup = new Dictionary<string, StoredData>();
             storedDataKeys = new List<string>();
             storedDataValues = new List<StoredData>();
         }
@@ -37,9 +46,9 @@ namespace nv.editor
 
             string lookupKey = typeof(T).Name;
 
-            if(storedDataLookup.ContainsKey(lookupKey)
-                && storedDataLookup[lookupKey].data.ContainsKey(firstLookupKey)
-                && storedDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
+            if(StoredDataLookup.ContainsKey(lookupKey)
+                && StoredDataLookup[lookupKey].data.ContainsKey(firstLookupKey)
+                && StoredDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
             {
                 return true;
             }
@@ -56,11 +65,11 @@ namespace nv.editor
 
             string lookupKey = typeof(T).Name;
 
-            if(storedDataLookup.ContainsKey(lookupKey)
-                && storedDataLookup[lookupKey].data.ContainsKey(firstLookupKey)
-                && storedDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
+            if(StoredDataLookup.ContainsKey(lookupKey)
+                && StoredDataLookup[lookupKey].data.ContainsKey(firstLookupKey)
+                && StoredDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
             {
-                data = (T)storedDataLookup[lookupKey].data[firstLookupKey][secondLookupKey];
+                data = (T)StoredDataLookup[lookupKey].data[firstLookupKey][secondLookupKey];
                 return true;
             }
             return false;
@@ -76,11 +85,11 @@ namespace nv.editor
 
             string lookupKey = typeof(T).Name;
 
-            if(storedDataLookup.ContainsKey(lookupKey)
-                && storedDataLookup[lookupKey].data.ContainsKey(firstLookupKey)
-                && storedDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
+            if(StoredDataLookup.ContainsKey(lookupKey)
+                && StoredDataLookup[lookupKey].data.ContainsKey(firstLookupKey)
+                && StoredDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
             {
-                return (T)storedDataLookup[lookupKey].data[firstLookupKey][secondLookupKey];
+                return (T)StoredDataLookup[lookupKey].data[firstLookupKey][secondLookupKey];
             }
             return default(T);
         }
@@ -95,21 +104,21 @@ namespace nv.editor
 
             string lookupKey = typeof(T).Name;
 
-            if(!storedDataLookup.ContainsKey(lookupKey))
-                storedDataLookup.Add(lookupKey, new StoredData());
+            if(!StoredDataLookup.ContainsKey(lookupKey))
+                StoredDataLookup.Add(lookupKey, new StoredData());
 
-            if(!storedDataLookup[lookupKey].data.ContainsKey(firstLookupKey))
+            if(!StoredDataLookup[lookupKey].data.ContainsKey(firstLookupKey))
             {
-                storedDataLookup[lookupKey].data.Add(firstLookupKey, new Dictionary<string, object>());
+                StoredDataLookup[lookupKey].data.Add(firstLookupKey, new Dictionary<string, object>());
             }
 
-            if(!storedDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
+            if(!StoredDataLookup[lookupKey].data[firstLookupKey].ContainsKey(secondLookupKey))
             {
-                storedDataLookup[lookupKey].data[firstLookupKey].Add(secondLookupKey, data);
+                StoredDataLookup[lookupKey].data[firstLookupKey].Add(secondLookupKey, data);
             }
             else
             {
-                storedDataLookup[lookupKey].data[firstLookupKey][secondLookupKey] = data;
+                StoredDataLookup[lookupKey].data[firstLookupKey][secondLookupKey] = data;
             }
 
             UpdateStoredData();
@@ -122,13 +131,16 @@ namespace nv.editor
 
         public void OnAfterDeserialize()
         {
-            storedDataLookup = storedDataKeys.Zip(storedDataValues, (k, v) => new { k, v }).ToDictionary(x => x.k, x=>x.v);
+            if( storedDataValues == null )
+                storedDataLookup = new Dictionary<string, StoredData>();
+
+            StoredDataLookup = storedDataKeys.Zip(storedDataValues, (k, v) => new { k, v }).ToDictionary(x => x.k, x=>x.v);
         }
 
         void UpdateStoredData()
         {
-            storedDataKeys = storedDataLookup.Keys.ToList();
-            storedDataValues = storedDataLookup.Values.ToList();
+            storedDataKeys = StoredDataLookup.Keys.ToList();
+            storedDataValues = StoredDataLookup.Values.ToList();
         }
 
         [Serializable]

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using UnityEngine.UI;
+using UnityEngine.Events;
+using UnityEngine.SceneManagement;
 
 #if UNITY_EDITOR
 using UnityEditor.Callbacks;
@@ -13,82 +15,209 @@ namespace nv
 {
     public class VersionManager : ScriptableSingleton<VersionManager>
     {
-        [Tooltip("Controls the displaying of a popup for notifying user that a saved scene is not in the project's build list (and so cannot be versioned).")]
-        public bool showBuildPopup = true;
+        [System.Serializable]
+        public class ProjectVersionData
+        {
+            public int releaseBuild;
+            public int debugBuild;
+            public int minor;
+            public string buildDate;
+        }
 
-        [Tooltip("Changing this does nothing. This is for debug display only.")]
-        public string versionDisplay;
+        [SerializeField, HideInInspector]
+        protected ProjectVersionData projectVersionData = new ProjectVersionData();
+
+        [System.Serializable]
+        public class SceneVersionData
+        {
+            public string sceneName;
+            public int sceneVersion;
+            public string sceneDate;
+        }
+
+        [SerializeField, HideInInspector]
+        protected List<SceneVersionData> sceneVersionData = new List<SceneVersionData>();
+
+#if UNITY_EDITOR
+        [MenuItem("NV/Assets/Create VersionManager")]
+        public static void Create()
+        {
+            CreateEditorInstance();
+        }
+#endif
+
+        [SerializeField, Tooltip("Controls the displaying of a popup for notifying user that a saved scene is not in the project's build list (and so cannot be versioned).")]
+        protected bool showBuildPopup = true;
+
+        [SerializeField, Tooltip("Changing this does nothing. This is for debug display only.")]
+        protected string versionDisplay;
+
+        [SerializeField, Tooltip("Changing this does nothing. This is for debug display only.")]
+        protected string versionDate;
+
+        [SerializeField, Tooltip("Used to identify when a local build is created VS a \'release\' build through another system (like SCM)")]
+        protected string perforceWorkspaceName;
+
+        [SerializeField]
+        protected string lastSavedBuildPath;
 
         /// <summary>
-        /// The current version of the project - ReleaseBuild.DebugBuild.MinorChange
+        /// The current version of the project - Format: ReleaseBuild.DebugBuild.MinorChange
         /// </summary>
-        public string ProjectVersion
+        public virtual string ProjectVersion
         {
             get
             {
-                return releaseBuild.ToString().PadLeft(1, '0') + "."
-                    + debugBuild.ToString().PadLeft(2, '0') + "." 
-                    + minor.ToString().PadLeft(4, '0');
+                return projectVersionData.releaseBuild.ToString().PadLeft(1, '0') + "."
+                    + projectVersionData.debugBuild.ToString().PadLeft(2, '0') + "."
+                    + projectVersionData.minor.ToString().PadLeft(4, '0');
+            }
+        }
+
+        /// <summary>
+        /// The current date of the project
+        /// </summary>
+        public virtual string ProjectVersionDate
+        {
+            get
+            {
+                return projectVersionData.buildDate;
             }
         }
 
         /// <summary>
         /// Returns the version of this scene. Will return "Unversioned" if the scene is not in the project's build list.
         /// </summary>
-        public string SceneVersion(string sceneName)
+        public virtual string SceneVersion(GameObject go)
+        {
+            return SceneVersion(go.scene.name);
+        }
+
+        /// <summary>
+        /// Returns the version of this scene. Will return "Unversioned" if the scene is not in the project's build list.
+        /// </summary>
+        public virtual string SceneVersion(Scene scene)
+        {
+            return SceneVersion(scene.name);
+        }
+
+        /// <summary>
+        /// Returns the version of this scene. Will return "Unversioned" if the scene is not in the project's build list.
+        /// </summary>
+        public virtual string SceneVersion(string sceneName)
         {
             int sIndex = GetSceneIndex(sceneName);
 
             if(sIndex < 0)
                 return "Unversioned";
 
-            return sceneVersions[sIndex].ToString();
+            return sceneVersionData[sIndex].sceneVersion.ToString();
         }
 
-        [SerializeField, HideInInspector]
-        int releaseBuild;
-        [SerializeField, HideInInspector]
-        int debugBuild;
-        [SerializeField, HideInInspector]
-        int minor;
 
-        [SerializeField,HideInInspector]
-        List<string> sceneNames;
-        [SerializeField, HideInInspector]
-        List<int> sceneVersions;
+        /// <summary>
+        /// Returns the date of this scene. Will return "Unversioned" if the scene is not in the project's build list.
+        /// </summary>
+        public virtual string SceneVersionDate(GameObject go)
+        {
+            return SceneVersionDate(go.scene.name);
+        }
+
+        /// <summary>
+        /// Returns the date of this scene. Will return "Unversioned" if the scene is not in the project's build list.
+        /// </summary>
+        public virtual string SceneVersionDate(Scene scene)
+        {
+            return SceneVersionDate(scene.name);
+        }
+
+        /// <summary>
+        /// Returns the date of this scene. Will return "Unversioned" if the scene is not in the project's build list.
+        /// </summary>
+        public virtual string SceneVersionDate(string sceneName)
+        {
+            int sIndex = GetSceneIndex(sceneName);
+
+            if(sIndex < 0)
+                return "Unversioned";
+
+            return sceneVersionData[sIndex].sceneDate;
+        }
+
+        protected virtual int GetSceneIndex(string sceneName)
+        {
+            return sceneVersionData.Select(x => x.sceneName).ToList().IndexOf(sceneName);
+        }
 
 #if UNITY_EDITOR
+        protected virtual string BuildDateTime
+        {
+            get
+            {
+                return (System.DateTime.Now.ToLongDateString()) + " " + System.DateTime.Now.ToLongTimeString();
+            }
+        }
+
         [ContextMenu("Clear All Version Data")]
-        void ClearAllVersionData()
+        public virtual void ClearAllVersionData()
         {
             bool result = EditorUtility.DisplayDialog("Confirm clear", "Clear and reset all version data?", "Clear");
             if(result)
             {
-                releaseBuild = 0;
-                debugBuild = 0;
-                minor = 0;
-                sceneNames.Clear();
-                sceneVersions.Clear();
+                projectVersionData.releaseBuild = 0;
+                projectVersionData.debugBuild = 0;
+                projectVersionData.minor = 0;
                 versionDisplay = ProjectVersion;
+
+                projectVersionData.buildDate = BuildDateTime;
+                versionDate = ProjectVersionDate;
+
+                sceneVersionData.Clear();
+                EditorUtility.SetDirty(this);
+                AssetDatabase.SaveAssets();
             }
         }
 
-        void UpdateReleaseVersion()
+        [ContextMenu("Increment Build Version Manually")]
+        public virtual void IncrementBuildVersionData()
         {
-            releaseBuild++;
-            debugBuild = 0;
-            minor = 0;
+            projectVersionData.debugBuild++;
+            projectVersionData.minor = 0;
             versionDisplay = ProjectVersion;
+
+            projectVersionData.buildDate = BuildDateTime;
+            versionDate = ProjectVersionDate;
+
+            EditorUtility.SetDirty(this);
+            AssetDatabase.SaveAssets();
         }
 
-        void UpdateBuildVersion()
+        protected virtual void UpdateReleaseVersion()
         {
-            debugBuild++;
-            minor = 0;
+            projectVersionData.releaseBuild++;
+            projectVersionData.debugBuild = 0;
+            projectVersionData.minor = 0;
             versionDisplay = ProjectVersion;
+
+            projectVersionData.buildDate = BuildDateTime;
+            versionDate = ProjectVersionDate;
+            EditorUtility.SetDirty(this);
+            AssetDatabase.SaveAssets();
         }
 
-        void UpdateSceneVersion(string sceneName)
+        protected virtual void UpdateBuildVersion()
+        {
+            projectVersionData.debugBuild++;
+            projectVersionData.minor = 0;
+            versionDisplay = ProjectVersion;
+
+            projectVersionData.buildDate = BuildDateTime;
+            versionDate = ProjectVersionDate;
+            EditorUtility.SetDirty(this);
+            AssetDatabase.SaveAssets();
+        }
+
+        protected virtual void UpdateSceneVersion(string sceneName)
         {
             int sIndex = GetSceneIndex(sceneName);
             if(sIndex < 0)
@@ -100,43 +229,54 @@ namespace nv
             if(sIndex < 0)
                 return;
 
-            sceneVersions[sIndex]++;
-            minor++;
+            sceneVersionData[sIndex].sceneVersion++;
+            sceneVersionData[sIndex].sceneDate = BuildDateTime;
+
+            projectVersionData.minor++;
+
             versionDisplay = ProjectVersion;
+            versionDate = ProjectVersionDate;
+            EditorUtility.SetDirty(this);
+            AssetDatabase.SaveAssets();
         }
 
-        void OnEnable()
+        protected virtual void OnEnable()
         {
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaved -= OnSceneSaved;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaved += OnSceneSaved;
-            versionDisplay = ProjectVersion;
         }
 
-        void OnDestroy()
+        protected virtual void OnDestroy()
         {
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaved -= OnSceneSaved;
         }
 
-        public static void OnSceneSaved(UnityEngine.SceneManagement.Scene scene)
+        protected virtual void OnSceneSaved(UnityEngine.SceneManagement.Scene scene)
         {
-            Instance.CheckAndShowPopupToAddSceneToBuildSettings(scene);
-            Instance.UpdateSceneVersion(scene.path);
-        }        
+            CheckAndShowPopupToAddSceneToBuildSettings(scene);
+            UpdateSceneVersion(GetNameFromPath(scene.path));
+
+            versionDisplay = ProjectVersion;
+            versionDate = ProjectVersionDate;
+        }
 
         [PostProcessBuildAttribute(1)]
         public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
         {
-            if(UnityEditor.EditorUserBuildSettings.development)
+            Instance.lastSavedBuildPath = pathToBuiltProject;
+            if(UnityEditor.EditorUserBuildSettings.development || pathToBuiltProject.Contains(Instance.perforceWorkspaceName))
             {
-                Instance.UpdateReleaseVersion();
+                Debug.Log("Updating build version");
+                Instance.UpdateBuildVersion();
             }
             else
             {
-                Instance.UpdateBuildVersion();
+                Debug.Log("Updating release version");
+                Instance.UpdateReleaseVersion();
             }
         }
 
-        void CheckAndShowPopupToAddSceneToBuildSettings(UnityEngine.SceneManagement.Scene scene)
+        protected virtual void CheckAndShowPopupToAddSceneToBuildSettings(UnityEngine.SceneManagement.Scene scene)
         {
             if(!showBuildPopup)
                 return;
@@ -144,7 +284,7 @@ namespace nv
             if(scene.buildIndex >= 0)
                 return;
 
-            bool result = EditorUtility.DisplayDialog("Add scene to build settings?", "The scene that was just saved is not in the project's build settings. Add it to the the build settings now?", "Add Scene: "+scene.name, "Cancel");
+            bool result = EditorUtility.DisplayDialog("Add scene to build settings?", "The scene that was just saved is not in the project's build settings. Add it to the the build settings now?", "Add Scene: " + scene.name, "Cancel");
             if(result)
             {
                 var list = UnityEditor.EditorBuildSettings.scenes.ToList();
@@ -153,8 +293,8 @@ namespace nv
             }
             else
             {
-                RemoveScene(scene.path);
-                result = EditorUtility.DisplayDialog("Hide this notification?", "Stop showing notifications when saving scenes not in the build settings list? (You may re-enabled this by selecting the "+typeof(VersionManager).Name+" scriptable object and changing the option.", "Stop showing this popup", "Continue showing this popup");
+                RemoveScene(GetNameFromPath(scene.path));
+                result = EditorUtility.DisplayDialog("Hide this notification?", "Stop showing notifications when saving scenes not in the build settings list? (You may re-enabled this by selecting the " + typeof(VersionManager).Name + " scriptable object and changing the option.", "Stop showing this popup", "Continue showing this popup");
                 if(result)
                 {
                     showBuildPopup = false;
@@ -162,16 +302,24 @@ namespace nv
             }
         }
 
-        void SyncVersionedScenes()
+        protected virtual string GetNameFromPath(string path)
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(path);
+            return name;
+        }
+
+        protected virtual void SyncVersionedScenes()
         {
             List<string> orphans = new List<string>();
 
             //search project for orphans
-            for(int i = 0; i < sceneNames.Count; ++i)
+            for(int i = 0; i < sceneVersionData.Count; ++i)
             {
-                bool found = UnityEditor.EditorBuildSettings.scenes.Where(x => x.path.Contains(sceneNames[i])).Count() > 0;
+                bool found = UnityEditor.EditorBuildSettings.scenes.Any(x => string.Compare(GetNameFromPath(x.path), sceneVersionData[i].sceneName) == 0);
                 if(!found)
-                    orphans.Add(sceneNames[i]);
+                {
+                    orphans.Add(sceneVersionData[i].sceneName);
+                }
             }
 
             foreach(string s in orphans)
@@ -181,31 +329,32 @@ namespace nv
 
             foreach(var s in UnityEditor.EditorBuildSettings.scenes)
             {
-                if(!sceneNames.Contains(s.path))
+                string sceneName = GetNameFromPath(s.path);
+                if(!sceneVersionData.Any(x => string.Compare(x.sceneName, sceneName) == 0))
                 {
-                    AddScene(s.path);
+                    AddScene(sceneName);
                 }
             }
         }
 
-        int GetSceneIndex(string sceneName)
+        protected virtual void AddScene(string sceneName)
         {
-            return sceneNames.IndexOf(sceneName);
+            SceneVersionData newScene = new SceneVersionData()
+            {
+                sceneDate = System.DateTime.Now.ToLongDateString(),
+                sceneName = sceneName,
+                sceneVersion = 0
+            };
+            sceneVersionData.Add(newScene);
         }
 
-        void AddScene(string sceneName)
-        {
-            sceneNames.Add(sceneName);
-            sceneVersions.Add(0);
-        }
-
-        void RemoveScene(string sceneName)
+        protected virtual void RemoveScene(string sceneName)
         {
             int index = GetSceneIndex(sceneName);
             if(index < 0)
                 return;
-            sceneNames.RemoveAt(index);
-            sceneVersions.RemoveAt(index);
+
+            sceneVersionData.RemoveAt(index);
         }
 #endif
     }

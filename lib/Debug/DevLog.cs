@@ -1,6 +1,6 @@
-﻿#if LOGLIB
+﻿
+#if LOGLIB
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System;
@@ -108,7 +108,6 @@ namespace nv
         }
 
 #if LOGLIB
-
         public class DevLogObject : Logger.LogSingleton<DevLogObject>
 #else
         public class DevLogObject : GameSingleton<DevLogObject>
@@ -127,29 +126,29 @@ namespace nv
                     if(Logger == null)
                     {
                         Logger = new DevLog();
-                        Logger.Setup();
+                        //Logger.Setup();
                     }
                     return logObject;
                 }
             }
         }
 
-        struct LogString
-        {
-            public string text;
-            public GameObject obj;
-        }
+        //struct LogString
+        //{
+        //    public string text;
+        //    public GameObject obj;
+        //}
 
-        Queue<LogString> content = new Queue<LogString>();
+        //Queue<LogString> content = new Queue<LogString>();
 
-        [SerializeField]
-        GameObject logRoot = null;
+        //[SerializeField]
+        //GameObject logRoot = null;
 
-        [SerializeField]
-        GameObject logWindow = null;
+        //[SerializeField]
+        //GameObject logWindow = null;
 
-        [SerializeField]
-        GameObject logTextPrefab = null;
+        //[SerializeField]
+        //GameObject logTextPrefab = null;
 
         static DevLogSettings settings;
 
@@ -179,176 +178,176 @@ namespace nv
             }
         }
 
-        Vector2 logWindowSize
-        {
-            get
-            {
-                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
+        //Vector2 logWindowSize
+        //{
+        //    get
+        //    {
+        //        CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
 
-                if(canvas.gameObject.GetComponent<RectTransform>() != null)
-                    return canvas.gameObject.GetComponent<RectTransform>().rect.size;
+        //        if(canvas.gameObject.GetComponent<RectTransform>() != null)
+        //            return canvas.gameObject.GetComponent<RectTransform>().rect.size;
 
-                return canvas.gameObject.AddComponent<RectTransform>().rect.size;
-            }
-            set
-            {
-                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
-                Rect currentRect;
-                if(canvas.gameObject.GetComponent<RectTransform>() != null)
-                    currentRect = canvas.gameObject.GetComponent<RectTransform>().rect;
-                else
-                    currentRect = canvas.gameObject.AddComponent<RectTransform>().rect;
+        //        return canvas.gameObject.AddComponent<RectTransform>().rect.size;
+        //    }
+        //    set
+        //    {
+        //        CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
+        //        Rect currentRect;
+        //        if(canvas.gameObject.GetComponent<RectTransform>() != null)
+        //            currentRect = canvas.gameObject.GetComponent<RectTransform>().rect;
+        //        else
+        //            currentRect = canvas.gameObject.AddComponent<RectTransform>().rect;
 
-                if(canvas.gameObject.GetComponent<RectTransform>() != null)
-                    canvas.gameObject.GetComponent<RectTransform>().sizeDelta = value;
-                else
-                    canvas.gameObject.AddComponent<RectTransform>().sizeDelta = value;
-            }
-        }
+        //        if(canvas.gameObject.GetComponent<RectTransform>() != null)
+        //            canvas.gameObject.GetComponent<RectTransform>().sizeDelta = value;
+        //        else
+        //            canvas.gameObject.AddComponent<RectTransform>().sizeDelta = value;
+        //    }
+        //}
 
         public int maxLines = 10;
 
-        public void SetupPrefabs()
-        {
-#if UNITY_EDITOR
-            settings = (DevLogSettings)AssetDatabase.LoadAssetAtPath("devLogSettings", typeof(DevLogSettings));
-#else
-            settings = (DevLogSettings)Resources.Load("devLogSettings", typeof(DevLogSettings));            
-#endif
+//        public void SetupPrefabs()
+//        {
+//#if UNITY_EDITOR
+//            settings = (DevLogSettings)AssetDatabase.LoadAssetAtPath("devLogSettings", typeof(DevLogSettings));
+//#else
+//            settings = (DevLogSettings)Resources.Load("devLogSettings", typeof(DevLogSettings));            
+//#endif
 
 
-            if(logRoot == null)
-            {
-                logRoot = DevLogObject.Instance.gameObject;
-                //logRoot = new GameObject("DebugLogRoot");
-                Canvas canvas = logRoot.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                if(canvas.gameObject.GetComponent<RectTransform>() != null)
-                    canvas.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2( 1920f * .5f, 1080f * 20f );
-                else
-                    canvas.gameObject.AddComponent<RectTransform>().sizeDelta = new Vector2(1920f * .5f, 1080f * 20f);
-                CanvasScaler canvasScaler = logRoot.AddComponent<CanvasScaler>();
-                canvasScaler.referenceResolution = new Vector2( 1920f, 1080f );
-            }
-            if(logTextPrefab == null)
-            {
-                logTextPrefab = new GameObject("DebugLogTextElement");
-                logTextPrefab.transform.SetParent(logRoot.transform);
-                Text text = logTextPrefab.AddComponent<Text>();
-                text.color = Color.red;
-                text.font = Font.CreateDynamicFontFromOSFont("Arial", 14);
-                text.fontSize = 12;
-                text.horizontalOverflow = HorizontalWrapMode.Overflow;
-                text.verticalOverflow = VerticalWrapMode.Overflow;
-                text.alignment = TextAnchor.MiddleLeft;
-                ContentSizeFitter csf = logTextPrefab.AddComponent<ContentSizeFitter>();
-                csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-                csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+//            if(logRoot == null)
+//            {
+//                logRoot = DevLogObject.Instance.gameObject;
+//                //logRoot = new GameObject("DebugLogRoot");
+//                Canvas canvas = logRoot.AddComponent<Canvas>();
+//                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+//                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+//                    canvas.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2( 1920f * .5f, 1080f * 20f );
+//                else
+//                    canvas.gameObject.AddComponent<RectTransform>().sizeDelta = new Vector2(1920f * .5f, 1080f * 20f);
+//                CanvasScaler canvasScaler = logRoot.AddComponent<CanvasScaler>();
+//                canvasScaler.referenceResolution = new Vector2( 1920f, 1080f );
+//            }
+//            if(logTextPrefab == null)
+//            {
+//                logTextPrefab = new GameObject("DebugLogTextElement");
+//                logTextPrefab.transform.SetParent(logRoot.transform);
+//                Text text = logTextPrefab.AddComponent<Text>();
+//                text.color = Color.red;
+//                text.font = Font.CreateDynamicFontFromOSFont("Arial", 14);
+//                text.fontSize = 12;
+//                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+//                text.verticalOverflow = VerticalWrapMode.Overflow;
+//                text.alignment = TextAnchor.MiddleLeft;
+//                ContentSizeFitter csf = logTextPrefab.AddComponent<ContentSizeFitter>();
+//                csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+//                csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-                if(logTextPrefab.gameObject.GetComponent<RectTransform>() != null)
-                    logTextPrefab.gameObject.GetComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
-                else
-                    logTextPrefab.gameObject.AddComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
+//                if(logTextPrefab.gameObject.GetComponent<RectTransform>() != null)
+//                    logTextPrefab.gameObject.GetComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
+//                else
+//                    logTextPrefab.gameObject.AddComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
 
-                logTextPrefab.gameObject.GetComponent<RectTransform>().anchorMin = new Vector2(0f, 1f);
-                //logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = Vector2.zero;
-                logTextPrefab.gameObject.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f,0f);
-                logTextPrefab.gameObject.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+//                logTextPrefab.gameObject.GetComponent<RectTransform>().anchorMin = new Vector2(0f, 1f);
+//                //logTextPrefab.gameObject.GetOrAddComponent<RectTransform>().sizeDelta = Vector2.zero;
+//                logTextPrefab.gameObject.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f,0f);
+//                logTextPrefab.gameObject.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
 
-                logTextPrefab.SetActive(false);
-            }
-            if( logWindow == null )
-            {
-                logWindow = new GameObject( "DebugLogWindow" );
-                logWindow.transform.SetParent( logRoot.transform );
-                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
+//                logTextPrefab.SetActive(false);
+//            }
+//            if( logWindow == null )
+//            {
+//                logWindow = new GameObject( "DebugLogWindow" );
+//                logWindow.transform.SetParent( logRoot.transform );
+//                CanvasRenderer canvas = logWindow.AddComponent<CanvasRenderer>();
 
-                if(canvas.gameObject.GetComponent<RectTransform>() != null)
-                    canvas.gameObject.GetComponent<RectTransform>().anchorMax = Vector2.one;
-                else
-                    canvas.gameObject.AddComponent<RectTransform>().anchorMax = Vector2.one;
+//                if(canvas.gameObject.GetComponent<RectTransform>() != null)
+//                    canvas.gameObject.GetComponent<RectTransform>().anchorMax = Vector2.one;
+//                else
+//                    canvas.gameObject.AddComponent<RectTransform>().anchorMax = Vector2.one;
 
-                //create a window that fills its parent
-                canvas.gameObject.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-                canvas.gameObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
-                canvas.gameObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+//                //create a window that fills its parent
+//                canvas.gameObject.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+//                canvas.gameObject.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+//                canvas.gameObject.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
 
-                //add background image
-                Image bg = logWindow.AddComponent<Image>();
+//                //add background image
+//                Image bg = logWindow.AddComponent<Image>();
 
-                //mostly black/dark grey transparent background
-                bg.color = new Color( .1f, .1f, .1f, .4f );
-            }
-            GameObject.DontDestroyOnLoad( logTextPrefab );
-            GameObject.DontDestroyOnLoad( logRoot );
-            GameObject.DontDestroyOnLoad( logWindow );
-        }
+//                //mostly black/dark grey transparent background
+//                bg.color = new Color( .1f, .1f, .1f, .4f );
+//            }
+//            GameObject.DontDestroyOnLoad( logTextPrefab );
+//            GameObject.DontDestroyOnLoad( logRoot );
+//            GameObject.DontDestroyOnLoad( logWindow );
+//        }
 
-        public void Hide()
-        {
-            logRoot.SetActive( false );
-        }
+        //public void Hide()
+        //{
+        //    logRoot.SetActive( false );
+        //}
 
-        public void Show( bool show = true )
-        {
-            logRoot.SetActive( show );
-        }
+        //public void Show( bool show = true )
+        //{
+        //    logRoot.SetActive( show );
+        //}
 
-        float LineSize()
-        {
-            return (float)logTextPrefab.GetComponent<Text>().fontSize + logTextPrefab.GetComponent<Text>().lineSpacing;
-        }
+        //float LineSize()
+        //{
+        //    return (float)logTextPrefab.GetComponent<Text>().fontSize + logTextPrefab.GetComponent<Text>().lineSpacing;
+        //}
 
-        void UpdateLog()
-        {
-            float line_size = LineSize();
-            float total_size = content.Count * line_size;
-            float max_size = logWindow.GetComponent<RectTransform>().rect.height;
-            while( total_size > max_size )
-            {
-                LogString lString = content.Dequeue();
-                GameObject.Destroy(lString.obj.gameObject);
-                total_size -= line_size;
-            }
-            while(content.Count > maxLines)
-            {
-                LogString lString = content.Dequeue();
-                GameObject.Destroy(lString.obj.gameObject);
-            }
+        //void UpdateLog()
+        //{
+        //    //float line_size = LineSize();
+        //    //float total_size = content.Count * line_size;
+        //    //float max_size = logWindow.GetComponent<RectTransform>().rect.height;
+        //    while( total_size > max_size )
+        //    {
+        //        LogString lString = content.Dequeue();
+        //        GameObject.Destroy(lString.obj.gameObject);
+        //        total_size -= line_size;
+        //    }
+        //    while(content.Count > maxLines)
+        //    {
+        //        LogString lString = content.Dequeue();
+        //        GameObject.Destroy(lString.obj.gameObject);
+        //    }
 
-            UpdatePositions();
-        }
+        //    UpdatePositions();
+        //}
 
-        void UpdatePositions()
-        {
-            float size = LineSize();
-            int index = 0;
-            foreach(LogString lstring in content)
-            {
-                lstring.obj.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -size * index);
-                ++index;
-            }
-        }
+        //void UpdatePositions()
+        //{
+        //    float size = LineSize();
+        //    int index = 0;
+        //    foreach(LogString lstring in content)
+        //    {
+        //        lstring.obj.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -size * index);
+        //        ++index;
+        //    }
+        //}
 
         public static void Log(string s)
         {
-            if(Application.isPlaying && Settings.guiLoggingEnabled)
-            {
-                if(DevLog.Logger.logTextPrefab == null)
-                    return;
-                if(DevLog.Logger.logWindow == null)
-                    return;
-                if(DevLog.Logger.logRoot == null)
-                    return;
+            //if(Application.isPlaying && Settings.guiLoggingEnabled)
+            //{
+            //    if(DevLog.Logger.logTextPrefab == null)
+            //        return;
+            //    if(DevLog.Logger.logWindow == null)
+            //        return;
+            //    if(DevLog.Logger.logRoot == null)
+            //        return;
 
-                LogString str = new LogString() { text = s, obj = GameObject.Instantiate(DevLog.Logger.logTextPrefab) as GameObject };
-                str.obj.transform.parent = DevLog.Logger.logWindow.transform;
-                str.obj.SetActive(true);
-                str.obj.transform.localScale = Vector3.one;
-                str.obj.GetComponent<Text>().text = s;
-                DevLog.Logger.content.Enqueue(str);
-                DevLog.Logger.UpdateLog();
-            }
+            //    LogString str = new LogString() { text = s, obj = GameObject.Instantiate(DevLog.Logger.logTextPrefab) as GameObject };
+            //    str.obj.transform.parent = DevLog.Logger.logWindow.transform;
+            //    str.obj.SetActive(true);
+            //    str.obj.transform.localScale = Vector3.one;
+            //    str.obj.GetComponent<Text>().text = s;
+            //    DevLog.Logger.content.Enqueue(str);
+            //    DevLog.Logger.UpdateLog();
+            //}
 
             if(Settings.loggingEnabled)
             {
@@ -358,16 +357,15 @@ namespace nv
 #if LOGLIB
                 UnityEngine.Debug.Log(s);
 #else
-                Wms.Framework.Trace.LogDebug(s);
 #endif
 #endif
             }
         }
 
-        void Setup()
-        {
-            SetupPrefabs();
-        }
+        //void Setup()
+        //{
+        //    SetupPrefabs();
+        //}
     }
 
     /// <summary>
@@ -431,9 +429,16 @@ namespace nv
             Dev.Log("Logging disabled");
             DevLog.Settings.loggingEnabled = false;
         }
+#else
+        static void Menu_PrintHideFlags(){ }
+        static void Menu_ClearHideFlags() { }
+        static void EnableGUIDebugLogging() { }
+        static void DisableGUIDebugLogging() { }
+        static void EnableDebugLogging() { }
+        static void DisableDebugLogging() { }
 #endif
-#region Internal
-        
+        #region Internal
+
         public static string ColorStr(int r, int g, int b)
         {
 #if LOGLIB
@@ -820,13 +825,13 @@ namespace nv
             }
         }
 
-#if UNITY_EDITOR
         class GetVarNameHelper
         {
             public static Dictionary<string, string> _cached_name = new Dictionary<string, string>();
         }
 
-        static string GetVarName( object obj )
+        static string GetVarName(object obj)
+#if UNITY_EDITOR
         {
             StackFrame stackFrame = new StackTrace(true).GetFrame(2);
             string fileName = stackFrame.GetFileName();
@@ -858,12 +863,6 @@ namespace nv
             }
         }
 #else
-        class GetVarNameHelper
-        {
-            public static Dictionary<string, string> _cached_name = new Dictionary<string, string>();
-        }
-
-        static string GetVarName( object obj )
         {
             return obj == null ? "Null" : obj.GetType().Name;
         }

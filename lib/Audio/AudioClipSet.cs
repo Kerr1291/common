@@ -1,189 +1,228 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using System.Linq;
 
 namespace nv
 {
     [RequireComponent(typeof(AudioSource))]
-    public class AudioClipSet : MonoBehaviour
+    public class AudioClipSet : MonoBehaviour, IList<AudioClip>
     {
-        [SerializeField, HideInInspector]
-        private float volume = 1.0f;
+        protected AudioSource source;
 
-        public virtual float Volume
-        {
-            get
-            {
-                return volume;
-            }
-            set
-            {
-                volume = Mathf.Max(value, 0.0f);
-            }
-        }
-
-        [SerializeField, HideInInspector]
-        AudioSource source;
-
-        /// <summary>
-        /// Get the attached audiosource component.
-        /// </summary>
+        [SerializeField]
+        protected List<AudioClip> clips;
+        protected List<float?> savedStartTimes;
+        
+        [SerializeField]
+        protected int defaultClip;
+      
         public AudioSource Source
         {
             get
             {
-                if(source == null)
-                    source = GetComponent<AudioSource>();
+                return source ?? (source = GetComponent<AudioSource>());
+            }
+        }
 
-                return source;
+        public List<AudioClip> Clips
+        {
+            get
+            {
+                return clips ?? (clips = new List<AudioClip>());
+            }
+        }
+
+        public List<float?> SavedStartTimes
+        {
+            get
+            {
+                return savedStartTimes ?? (savedStartTimes = new List<float?>());
+            }
+        }
+
+        public int DefaultClip
+        {
+            get
+            {
+                return defaultClip;
+            }
+            set
+            {
+                defaultClip = value;
+            }
+        }
+
+        public float Volume
+        {
+            get
+            {
+                return Source.volume;
+            }
+            set
+            {
+                Source.volume = Mathf.Max(value, 0.0f);
+            }
+        }
+
+        public float Time
+        {
+            get
+            {
+                return Source.time;
+            }
+            set
+            {
+                Source.time = value;
+            }
+        }
+
+        public float TimeNormalized
+        {
+            get
+            {
+                return CurrentClipLength <= 0f ? 0f : Mathf.Clamp01( Time / CurrentClipLength);
+            }
+            set
+            {
+                Time = value * CurrentClipLength;
+            }
+        }
+
+        public AudioClip CurrentClip
+        {
+            get
+            {
+                return Source.clip;
+            }
+        }
+        public float CurrentClipLength
+        {
+            get
+            {
+                if(CurrentClip == null)
+                    return 0f;
+                return CurrentClip.length;
+            }
+        }
+
+        public int? CurrentClipIndex
+        {
+            get
+            {
+                int currentIndex = Clips.IndexOf(Source.clip);
+                return currentIndex >= 0 ? new int?(currentIndex) : null;
+            }
+        }
+
+        public float? CurrentClipSavedStartTime
+        {
+            get
+            {
+                return CurrentClipIndex != null ? SavedStartTimes[CurrentClipIndex.Value] : null;
+            }
+            set
+            {
+                if(CurrentClipIndex != null)
+                    SavedStartTimes[CurrentClipIndex.Value] = value;
+            }
+        }
+
+        public int Count
+        {
+            get
+            {
+                return Clips.Count;
             }
         }
         
-        [Reorderable]
-        public List<AudioClip> clips;
+        public int PreviousClip
+        {
+            get;
+            protected set;
+        }
 
-        [SerializeField, HideInInspector]
-        protected int currentIndex = 0;
-
-        protected int previousIndex = -1;
-
-        public float NormalizedTime
+        public bool IsReadOnly
         {
             get
             {
-                return Source.time / CurrentClip.length;
-            }
-            set
-            {
-                Source.time = value * CurrentClip.length;
+                return ((IList<AudioClip>)Clips).IsReadOnly;
             }
         }
 
-        public virtual AudioClip CurrentClip
+        public AudioClip this[int index]
         {
             get
             {
-                if(clips == null)
-                    return null;
-
-                if(clips.Count <= 0)
-                    return null;
-
-                currentIndex = currentIndex % clips.Count;
-                if(currentIndex >= clips.Count)
-                    return null;
-
-                return clips[currentIndex];
-            }
-        }
-
-        public virtual int CurrentIndex
-        {
-            get
-            {
-                return currentIndex;
+                return Clips[index];
             }
             set
             {
-                if(currentIndex != value && currentIndex >= 0)
-                    Source.Stop();
-                previousIndex = currentIndex;
-                if(clips == null || clips.Count <= 0)
+                //if setting this will replace the active clip on the source...
+                if(CurrentClipIndex != null && index == CurrentClipIndex.Value)
                 {
-                    currentIndex = 0;
-                    return;
+                    Source.Stop();
                 }
-                currentIndex = value % clips.Count;
-                Source.clip = clips[currentIndex];
+
+                Clips[index] = value;
+                SavedStartTimes[index] = null;
+                Source.clip = value;
             }
         }
 
-        public virtual int PreviousIndex
+        public virtual void Play(bool resume = false, int? index = null)
         {
-            get
-            {
-                return previousIndex;
-            }
-        }
+            if(Clips.Count <= 0)
+                return;
 
-        public virtual AudioClip PreviousClip
-        {
-            get
-            {
-                if(clips.Count <= 0)
-                    return null;
-
-                previousIndex = previousIndex % clips.Count;
-                if(previousIndex >= clips.Count)
-                    return null;
-
-                return clips[previousIndex];
-            }
-        }
-
-        [SerializeField, HideInInspector]
-        protected List<float> savedClipTimes;
-
-        public virtual float SavedClipTime
-        {
-            get
-            {
-                return savedClipTimes[currentIndex];
-            }
-            protected set
-            {
-                savedClipTimes[currentIndex] = value;
-            }
-        }
-
-        /// <summary>
-        /// By calling this Play() method the user may resume from the saved time
-        /// </summary>
-        public virtual void Play(bool resume = false)
-        {
             Stop();
-            if(resume == true)
-            {
-                SavedClipTime = SavedClipTime >= Source.clip.length ? 0f : SavedClipTime;
-                Source.time = SavedClipTime;
-            }
-            else
-            {
-                SavedClipTime = 0.0f;
-                Source.time = 0f;
-            }
-
-            Source.Play();
-        }
-
-        /// <summary>
-        /// By calling this Play() method the user may start the clip at a different time
-        /// </summary>
-        public virtual void Play(float startTime)
-        {
-            Stop();
-            SavedClipTime = startTime;
-            Play(true);
-        }
-
-        public virtual void Play(bool resume, int index)
-        {
-            Stop();
-
-            CurrentIndex = index;
             
-            Play(resume);
+            if(index != null)
+            {
+                if(CurrentClipIndex != index.Value)
+                    Source.clip = Clips[index.Value];
+                if(resume && SavedStartTimes[index.Value] != null)
+                    Source.time = SavedStartTimes[index.Value].Value;
+                SavedStartTimes[index.Value] = null;
+            }
+            else if(Source.clip == null)
+            {
+                Source.clip = Clips[defaultClip];
+                if(resume && SavedStartTimes[defaultClip] != null)
+                    Source.time = SavedStartTimes[defaultClip].Value;
+                SavedStartTimes[defaultClip] = null;
+            }
+
+            if(Source.clip == null)
+                return;
+            
+            Source.Play();
+            PreviousClip = CurrentClipIndex.Value;
+        }
+
+        public virtual void Play(float startTime, int? index = null)
+        {
+            if(Clips.Count <= 0)
+                return;
+
+            Play(false, index);
+            Time = startTime;
         }
 
         public virtual void PlayRandom(bool resume = false, bool canPlayPreviousClip = true)
         {
-            int index = UnityEngine.Random.Range(0, clips.Count);
+            int index = PreviousClip;
 
-            if(!canPlayPreviousClip)
+            if(Count > 1)
             {
-                //get an index we haven't used
-                while(clips.Count > 1 && clips[index] == PreviousClip)
-                    index = UnityEngine.Random.Range(0, clips.Count);
+                //get an index we haven't used, if required
+                do
+                {
+                    index = UnityEngine.Random.Range(0, Count);
+                    if(canPlayPreviousClip)
+                        break;
+                }
+                while(index == PreviousClip);
             }
 
             Play(resume, index);
@@ -200,51 +239,93 @@ namespace nv
         /// </summary>
         public virtual void Stop()
         {
-            SavedClipTime = Source.time;
+            if(CurrentClipIndex != null && CurrentClipSavedStartTime == null)
+                SavedStartTimes[CurrentClipIndex.Value] = Source.time;
             Source.Stop();
         }
 
         protected virtual void Reset()
         {
-            source = GetComponent<AudioSource>();
 #if UNITY_EDITOR
             UnityEditorInternal.ComponentUtility.MoveComponentUp(this);
 #endif
-            Source.volume = 0.0f;
+            Source.playOnAwake = false;
+            savedStartTimes = Clips.Select(x => (float?)null).ToList();
         }
 
         protected virtual void OnValidate()
         {
-            if(source == null)
-                source = GetComponent<AudioSource>();
-
+#if UNITY_EDITOR
             //keep the current clip and the unity source clips in sync
-            if(CurrentClip != Source.clip)
+            if(defaultClip < Clips.Count && Source.clip != Clips[defaultClip])
             {
-                if(CurrentClip == null)
-                {
-                    if(clips.Count <= 0)
-                        clips.Add(Source.clip);
-                    else
-                        clips[currentIndex] = Source.clip;
-                }
-                else
-                {
-                    Source.clip = CurrentClip;
-                }
+                Source.clip = Clips[defaultClip];
             }
+            savedStartTimes = Clips.Select(x => (float?)null).ToList();
+#endif
+        }
 
-            if(savedClipTimes == null || savedClipTimes.Count != clips.Count)
-            {
-                if(clips == null)
-                    clips = new List<AudioClip>();
-                savedClipTimes = new List<float>();
-                for(int i = 0; i < clips.Count; ++i)
-                {
-                    savedClipTimes.Add(0f);
-                }
-            }
-        }        
+        protected virtual void Awake()
+        {
+            if(SavedStartTimes.Count != Clips.Count)
+                savedStartTimes = Clips.Select(x => (float?)null).ToList();
+        }
+
+        public int IndexOf(AudioClip item)
+        {
+            return ((IList<AudioClip>)Clips).IndexOf(item);
+        }
+
+        public void Insert(int index, AudioClip item)
+        {
+            savedStartTimes.Insert(index, null);
+            ((IList<AudioClip>)Clips).Insert(index, item);
+        }
+
+        public void RemoveAt(int index)
+        {
+            savedStartTimes.RemoveAt(index);
+               ((IList<AudioClip>)Clips).RemoveAt(index);
+        }
+
+        public void Add(AudioClip item)
+        {
+            savedStartTimes.Add(null);
+            ((IList<AudioClip>)Clips).Add(item);
+        }
+
+        public void Clear()
+        {
+            ((IList<AudioClip>)Clips).Clear();
+            savedStartTimes.Clear();
+        }
+
+        public bool Contains(AudioClip item)
+        {
+            return ((IList<AudioClip>)Clips).Contains(item);
+        }
+
+        public void CopyTo(AudioClip[] array, int arrayIndex)
+        {
+            ((IList<AudioClip>)Clips).CopyTo(array, arrayIndex);
+        }
+
+        public bool Remove(AudioClip item)
+        {
+            if(IndexOf(item) >= 0)
+                savedStartTimes.RemoveAt(IndexOf(item));
+            return ((IList<AudioClip>)Clips).Remove(item);
+        }
+
+        public IEnumerator<AudioClip> GetEnumerator()
+        {
+            return ((IList<AudioClip>)Clips).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IList<AudioClip>)Clips).GetEnumerator();
+        }
     }
 }
 

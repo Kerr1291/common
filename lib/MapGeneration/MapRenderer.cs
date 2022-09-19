@@ -19,7 +19,7 @@ namespace nv
 
         [Tooltip("The source map data to render")]
         [EditScriptable]
-        public ProcGenMap mapData;
+        public ProcGenMap mapData; //TODO: potentially remove this reference, as the renderer content will be updated by other classes
 
         [Tooltip("Used to generate chunks")]
         [EditScriptable]
@@ -128,14 +128,21 @@ namespace nv
             }
         }
 
-        IEnumerator Start()
+        /*IEnumerator Start()
         {
-            if(debugGenerate)
+            yield return UpdateMapWithData(mapData);
+        }*/
+
+        public IEnumerator UpdateMapWithData(ProcGenMap mapData)
+        {
+            Clear();
+            this.mapData = mapData;
+            if (mapData == null || mapData.GeneratedMap == null)
             {
                 yield return mapData.Generate();
             }
 
-            while(mapData == null || mapData.GeneratedMap == null)
+            while (mapData == null || mapData.GeneratedMap == null)
                 yield return null;
 
             CreateChunks();

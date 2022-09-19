@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using System.Reflection;
 
 namespace nv
 {
@@ -19,7 +20,7 @@ namespace nv
             }
             else
             {
-                Dev.Log( componentHeader + @" \--Component: " + c.GetType().Name );
+                Debug.Log( componentHeader + @" \--Component: " + c.GetType().Name );
             }
         }
 
@@ -37,11 +38,11 @@ namespace nv
                 }
                 else
                 {
-                    Dev.Log( componentHeader + @" \--GameObject layer: " + ( c as Transform ).gameObject.layer );
-                    Dev.Log( componentHeader + @" \--GameObject tag: " + ( c as Transform ).gameObject.tag );
-                    Dev.Log( componentHeader + @" \--Transform Position: " + ( c as Transform ).position );
-                    Dev.Log( componentHeader + @" \--Transform Rotation: " + ( c as Transform ).rotation.eulerAngles );
-                    Dev.Log( componentHeader + @" \--Transform LocalScale: " + ( c as Transform ).localScale );
+                    Debug.Log( componentHeader + @" \--GameObject layer: " + ( c as Transform ).gameObject.layer );
+                    Debug.Log( componentHeader + @" \--GameObject tag: " + ( c as Transform ).gameObject.tag );
+                    Debug.Log( componentHeader + @" \--Transform Position: " + ( c as Transform ).position );
+                    Debug.Log( componentHeader + @" \--Transform Rotation: " + ( c as Transform ).rotation.eulerAngles );
+                    Debug.Log( componentHeader + @" \--Transform LocalScale: " + ( c as Transform ).localScale );
                 }
             }
         }
@@ -66,6 +67,46 @@ namespace nv
                     Dev.Log( componentHeader + @" \--BoxCollider2D Bounds-Max: " + ( c as BoxCollider2D ).bounds.max );
                     Dev.Log( componentHeader + @" \--BoxCollider2D isTrigger: " + ( c as BoxCollider2D ).isTrigger );
                 }
+            }
+        }        
+
+        public static void PrintComponentWithReflection(this Component c, string componentHeader = "", System.IO.StreamWriter file = null)
+        {
+            Type cType = c.GetType();
+            var bflags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var mflags = MemberTypes.Field | MemberTypes.Property | MemberTypes.Method;
+
+            var members = cType.GetMembers(bflags);
+
+            foreach(var m in members)
+            {
+                string label = m.Name;
+                string data = "Not a field or property!";
+
+                if(m is FieldInfo)
+                {
+                    object fo = (m as FieldInfo).GetValue(c);                    
+                    data = fo == null ? "null" : fo.ToString();
+                }
+                else if(m is PropertyInfo)
+                {
+                    object po = (m as PropertyInfo).GetValue(c, null);
+                    data = po == null ? "null" : po.ToString();
+                }
+
+                Print(componentHeader, label, data);
+            }
+        }
+
+        private static void Print(string header, string label, string data, System.IO.StreamWriter file = null)
+        {
+            if(file != null)
+            {
+                file.WriteLine(header + @" \--" + label + ": " + data);
+            }
+            else
+            {
+                Debug.Log(header + @" \--" + label + ": " + data);
             }
         }
     }

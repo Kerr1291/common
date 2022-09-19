@@ -31,26 +31,26 @@ namespace nv.Tests
     //    }
     //}
 
-    public class DevLogTests
-    {
-        [UnityTest]
-        public IEnumerator CreateDevLogAndPostSomeData()
-        {
-            if(GameObject.FindObjectOfType<Camera>() == null)
-            {
-                GameObject temp = new GameObject();
-                temp.AddComponent<Camera>();
-            }
-            bool test = false;
-            for(int i = 0; i < 11; ++i)
-                nv.Dev.Log("Test: "+i);
-            nv.Dev.LogVar(test);
-            //new MonoBehaviourTest<TestGameTransition>();
-            var behaviorTest = Object.FindObjectOfType<DevLog.DevLogObject>();
-            yield return null;
-            Assert.That(behaviorTest != null, Is.True, "DevLog was created.");
-            yield break;
-        }
-    }
+    //public class DevLogTests
+    //{
+    //    [UnityTest]
+    //    public IEnumerator CreateDevLogAndPostSomeData()
+    //    {
+    //        if(GameObject.FindObjectOfType<Camera>() == null)
+    //        {
+    //            GameObject temp = new GameObject();
+    //            temp.AddComponent<Camera>();
+    //        }
+    //        bool test = false;
+    //        for(int i = 0; i < 11; ++i)
+    //            nv.Log("Test: "+i);
+    //        nv.Dev.LogVar(test);
+    //        //new MonoBehaviourTest<TestGameTransition>();
+    //        var behaviorTest = Object.FindObjectOfType<DevLog.DevLogObject>();
+    //        yield return null;
+    //        Assert.That(behaviorTest != null, Is.True, "DevLog was created.");
+    //        yield break;
+    //    }
+    //}
 #endif
 }

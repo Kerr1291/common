@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 847dac374c8498c4191f9f11594f8dfb, type: 3}
+  m_Name: DebugLogUIText
+  m_EditorClassIdentifier: 
+  ojbectNamePrefix: 'LoggedText:'
+  objectMappingKeys:
+  - DebugLogString
+  objectMappingValues:
+  - {fileID: 114095205304172566, guid: eaaf9a9dede609a45a8c39fa197f779d, type: 2}

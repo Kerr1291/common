@@ -3,13 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.Experimental.AssetImporters;
+
 using System.IO;
 
 namespace nv.editor
 {
-    [ScriptedImporter(1, "tmpl")]
-    public class ScriptTemplater : ScriptedImporter
+    [UnityEditor.AssetImporters.ScriptedImporter(1, "tmpl")]
+    public class ScriptTemplater : UnityEditor.AssetImporters.ScriptedImporter
     {
         public string defaultNamespaceName = "nv";
         public string defaultClassName = "NewClass";
@@ -17,8 +17,11 @@ namespace nv.editor
         [HideInInspector]
         public string text = "Asset not imported.";
 
-        public override void OnImportAsset(AssetImportContext ctx)
+        public override void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
         {
+            if(ctx == null)
+                return;
+
             text = File.ReadAllText(ctx.assetPath);
 
             if(text.Contains(" : Editor"))
@@ -29,7 +32,7 @@ namespace nv.editor
     }
 
     [CustomEditor(typeof(ScriptTemplater))]
-    public class ScriptTemplaterEditor : ScriptedImporterEditor
+    public class ScriptTemplaterEditor : UnityEditor.AssetImporters.ScriptedImporterEditor
     {
         const string TEMPLATE_NAMESPACE_NAME = "CUSTOMNAMESPACE";
         const string TEMPLATE_CLASS_NAME = "CUSTOMTYPE";
@@ -82,6 +85,12 @@ namespace nv.editor
 
         void DrawPreviewGUI()
         {
+            if(Target == null)
+                return;
+
+            if(Target.text == null)
+                return;
+
             string truncatedNotice = "";
             if(Target.text.Length >= numberOfLinesInPreview)
                 truncatedNotice = "\n<Preview truncated>";

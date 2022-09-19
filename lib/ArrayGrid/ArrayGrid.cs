@@ -144,6 +144,14 @@ namespace nv
             Resize(x, y);
         }
 
+        public ArrayGrid( int x, int y, IEnumerable<T> initialValue )
+        {
+            Resize( x, y );
+            var temp = initialValue.ToList();            
+            for( int i = 0; i < data.Count && i < temp.Count; ++i )
+                data[ i ] = temp[i];
+        }
+
         public ArrayGrid(int x, int y, T initialValue)
         {
             Resize(x, y);

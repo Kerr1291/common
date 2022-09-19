@@ -8,8 +8,31 @@ using System.IO;
 
 namespace nv
 {
+    public static class SceneManagerExtensions
+    {
+        public static List<Scene> GetLoadedScenes()
+        {
+            List<Scene> scenes = new List<Scene>();
+            for(int i = 0; i < SceneManager.sceneCount; ++i)
+            {
+                scenes.Add(SceneManager.GetSceneAt(i));
+            }
+            return scenes;
+        }
+    }
+
     public static class SceneExtensions
     {
+        public static int GetLoadedIndex(this Scene scene)
+        {
+            for(int i = 0; i < SceneManager.sceneCount; ++i)
+            {
+                if(scene.buildIndex == SceneManager.GetSceneAt(i).buildIndex)
+                    return i;
+            }
+            return -1;
+        }
+
         public static GameObject FindGameObject( this Scene scene, string name )
         {
             if( !scene.IsValid() )
@@ -26,7 +49,7 @@ namespace nv
                         break;
                     }
 
-                    GameObject found = go.FindGameObjectInChildren(name);
+                    GameObject found = go.FindGameObjectInChildrenWithName(name);
                     if( found != null )
                         return found;
                 }
@@ -39,17 +62,17 @@ namespace nv
             return null;
         }
 
-        public static void PrintHierarchy( this Scene scene, int localIndex = -1, Bounds? sceneBounds = null, List<string> randomizerEnemyTypes = null, string outputFileName = "" )
+        public static void PrintHierarchy( this Scene scene, string outputFilePath = "", bool verbose = true)
         {
             if( !scene.IsValid() )
                 return;
 
             System.IO.StreamWriter file = null;
-            if( !string.IsNullOrEmpty( outputFileName ) )
+            if( !string.IsNullOrEmpty( outputFilePath ) )
             {
                 try
                 {
-                    file = new System.IO.StreamWriter( Application.dataPath + "/Managed/Mods/" + outputFileName );
+                    file = new System.IO.StreamWriter( outputFilePath );
                 }
                 catch(Exception e)
                 {
@@ -63,16 +86,16 @@ namespace nv
                 file.WriteLine( "START =====================================================" );
                 file.WriteLine( "Printing full hierarchy for scene: " + scene.name + " [Build index: " + scene.buildIndex + "]" );
 
-                if( localIndex >= 0 )
-                    file.WriteLine( "Local scene index: " + localIndex );
+                if(scene.GetLoadedIndex() >= 0)
+                    file.WriteLine("Loaded scene index: " + scene.GetLoadedIndex());
             }
             else
             {
-                Dev.Log( "START =====================================================" );
-                Dev.Log( "Printing full hierarchy for scene: " + scene.name + " [Build index: " + scene.buildIndex + "]" );
+                Debug.Log( "START =====================================================" );
+                Debug.Log( "Printing full hierarchy for scene: " + scene.name + " [Build index: " + scene.buildIndex + "]" );
 
-                if( localIndex >= 0 )
-                    Dev.Log( "Local scene index: " + localIndex );
+                if(scene.GetLoadedIndex() >= 0)
+                    Debug.Log("Loaded scene index: " + scene.GetLoadedIndex());
             }
 
             GameObject[] rootGameObjects = scene.GetRootGameObjects();
@@ -89,18 +112,18 @@ namespace nv
                         }
                         else
                         {
-                            Dev.Log( "Scene " + scene.name + " has a null root game object! Skipping debug print scene..." );
+                            Debug.Log( "Scene " + scene.name + " has a null root game object! Skipping debug print scene..." );
                         }
                         break;
                     }
 
-                    if( string.IsNullOrEmpty( outputFileName ) )
+                    if( string.IsNullOrEmpty( outputFilePath ) )
                     {
-                        go.PrintSceneHierarchyTree( true );
+                        go.PrintSceneHierarchyTree(verbose);
                     }
                     else
                     {
-                        go.PrintSceneHierarchyTree( true, file );
+                        go.PrintSceneHierarchyTree(verbose, file );
                     }
                 }
             }
@@ -116,7 +139,89 @@ namespace nv
             }
             else
             {
-                Dev.Log( "END +++++++++++++++++++++++++++++++++++++++++++++++++++++++" );
+                Debug.Log( "END +++++++++++++++++++++++++++++++++++++++++++++++++++++++" );
+            }
+        }
+
+
+        public static void PrintHierarchyRoot(this Scene scene, string outputFilePath = "")
+        {
+            if(!scene.IsValid())
+                return;
+
+            System.IO.StreamWriter file = null;
+            if(!string.IsNullOrEmpty(outputFilePath))
+            {
+                try
+                {
+                    file = new System.IO.StreamWriter(outputFilePath);
+                }
+                catch(Exception e)
+                {
+                    Dev.Log("Exception!: " + e.Message);
+                    file = null;
+                }
+            }
+
+            if(file != null)
+            {
+                file.WriteLine("START =====================================================");
+                file.WriteLine("Printing root hierarchy for scene: " + scene.name + " [Build index: " + scene.buildIndex + "]");
+
+                if(scene.GetLoadedIndex() >= 0)
+                    file.WriteLine("Loaded scene index: " + scene.GetLoadedIndex());
+            }
+            else
+            {
+                Debug.Log("START =====================================================");
+                Debug.Log("Printing root hierarchy for scene: " + scene.name + " [Build index: " + scene.buildIndex + "]");
+
+                if(scene.GetLoadedIndex() >= 0)
+                    Debug.Log("Loaded scene index: " + scene.GetLoadedIndex());
+            }
+
+            GameObject[] rootGameObjects = scene.GetRootGameObjects();
+
+            try
+            {
+                foreach(GameObject go in rootGameObjects)
+                {
+                    if(go == null)
+                    {
+                        if(file != null)
+                        {
+                            file.WriteLine("Scene " + scene.name + " has a null root game object! Skipping debug print scene...");
+                        }
+                        else
+                        {
+                            Debug.Log("Scene " + scene.name + " has a null root game object! Skipping debug print scene...");
+                        }
+                        break;
+                    }
+
+                    if(string.IsNullOrEmpty(outputFilePath))
+                    {
+                        file.WriteLine(go.GetSceneHierarchyPath());
+                    }
+                    else
+                    {
+                        Debug.Log(go.GetSceneHierarchyPath());
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Dev.Log("Exception: " + e.Message);
+            }
+
+            if(file != null)
+            {
+                file.WriteLine("END +++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                file.Close();
+            }
+            else
+            {
+                Debug.Log("END +++++++++++++++++++++++++++++++++++++++++++++++++++++++");
             }
         }
     }

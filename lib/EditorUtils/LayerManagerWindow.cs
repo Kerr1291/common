@@ -12,12 +12,12 @@ namespace nv.editor
     public class GameLayers : ScriptableObject
     {
 #if UNITY_EDITOR
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/Assets/Create GameLayers")]
+        [MenuItem( nv.editor.Consts.Menu.ROOT + "/Assets/Create GameLayers" )]
         public static GameLayers CreateLayerContainer()
         {
             GameLayers asset = ScriptableObject.CreateInstance<GameLayers>();
 
-            AssetDatabase.CreateAsset(asset, "Assets/Resources/GameLayers.asset");
+            AssetDatabase.CreateAsset( asset, "Assets/Resources/GameLayers.asset" );
             AssetDatabase.SaveAssets();
 
             EditorUtility.FocusProjectWindow();
@@ -75,29 +75,25 @@ namespace nv.editor
 
         public string[] layers;
 
-        public string[] Layers
-        {
-            get
-            {
-                if(layers == null)
-                    layers = new List<string>(DefaultLayers).ToArray();
+        public string[] Layers {
+            get {
+                if( layers == null )
+                    layers = new List<string>( DefaultLayers ).ToArray();
                 return layers;
             }
         }
 
-        static public List<string> DefaultLayers
-        {
-            get
-            {
+        static public List<string> DefaultLayers {
+            get {
                 return defaultLayers.ToList();
             }
         }
 
-        static public int GetLayerIndex(string layer)
+        static public int GetLayerIndex( string layer )
         {
-            for(int i = 0; i < defaultLayers.Length; ++i)
+            for( int i = 0; i < defaultLayers.Length; ++i )
             {
-                if(layer == defaultLayers[i])
+                if( layer == defaultLayers[ i ] )
                     return i;
             }
             return 0; //Default layer
@@ -119,34 +115,26 @@ namespace nv.editor
 
         GameLayers layersObject;
 
-        static float WindowHeight
-        {
-            get
-            {
+        static float WindowHeight {
+            get {
                 return _base_h;
             }
         }
 
-        static float WindowWidth
-        {
-            get
-            {
+        static float WindowWidth {
+            get {
                 return _base_w;
             }
         }
 
-        static Vector2 DefaultWindowPos
-        {
-            get
-            {
-                return new Vector2(_window_pos_x, _window_pos_y);
+        static Vector2 DefaultWindowPos {
+            get {
+                return new Vector2( _window_pos_x, _window_pos_y );
             }
         }
 
-        public static string LayerAssetPath
-        {
-            get
-            {
+        public static string LayerAssetPath {
+            get {
                 return "ProjectSettings/TagManager.asset";
             }
         }
@@ -162,17 +150,17 @@ namespace nv.editor
         }
 
         //Hotkey: Ctrl + shift + alt + L
-        [MenuItem(nv.editor.Consts.MENU_ROOT + "/Window/Game Layer Manager %#&l")]
+        [MenuItem( nv.editor.Consts.Menu.ROOT + "/Window/Game Layer Manager %#&l" )]
         static void OpenLayerWindow()
         {
             repositionWindowOnce = repositionEnabled;
 
             Rect windowDimensions = CalculateWindowDimensions();
 
-            CreateWindow(windowDimensions);
+            CreateWindow( windowDimensions );
         }
 
-        static void CreateWindow(Rect dimensions)
+        static void CreateWindow( Rect dimensions )
         {
             LayerManagerWindow window = ScriptableObject.CreateInstance<LayerManagerWindow>();
             window.position = dimensions;
@@ -185,97 +173,97 @@ namespace nv.editor
         {
             //TODO: Create an object field and have the user set the game layers object through that instead of it auto-creating below
 
-            if(layersObject == null)
+            if( layersObject == null )
             {
                 layersObject = GameLayers.CreateLayerContainer();
             }
 
             Rect newRect = CalculateWindowDimensions();
-            if(LayerManagerWindow.repositionWindowOnce)
-                this.position = new Rect(GUIUtility.GUIToScreenPoint(Event.current.mousePosition), new Vector2(newRect.width, newRect.height));
+            if( LayerManagerWindow.repositionWindowOnce )
+                this.position = new Rect( GUIUtility.GUIToScreenPoint( Event.current.mousePosition ), new Vector2( newRect.width, newRect.height ) );
 
             LayerManagerWindow.repositionWindowOnce = false;
 
-            EditorGUILayout.LabelField("Game Layers:", EditorStyles.wordWrappedLabel);
-            EditorGUILayout.LabelField("", EditorStyles.wordWrappedLabel);
-            GUILayout.Space(5);
+            EditorGUILayout.LabelField( "Game Layers:", EditorStyles.wordWrappedLabel );
+            EditorGUILayout.LabelField( "", EditorStyles.wordWrappedLabel );
+            GUILayout.Space( 5 );
 
             SerializedObject manager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath(LayerAssetPath)[0]);
             SerializedProperty layersProp = manager.FindProperty("layers");
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Layer", GUILayout.MaxWidth(100));
-            EditorGUILayout.LabelField("Current", EditorStyles.label, GUILayout.MaxWidth(200));
-            EditorGUILayout.LabelField("Default", EditorStyles.label, GUILayout.MaxWidth(200));
+            EditorGUILayout.LabelField( "Layer", GUILayout.MaxWidth( 100 ) );
+            EditorGUILayout.LabelField( "Current", EditorStyles.label, GUILayout.MaxWidth( 200 ) );
+            EditorGUILayout.LabelField( "Default", EditorStyles.label, GUILayout.MaxWidth( 200 ) );
             EditorGUILayout.EndHorizontal();
 
             //allow editing of the project's layers
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-            for(int i = 8; i <= 31; i++)
+            scrollPos = EditorGUILayout.BeginScrollView( scrollPos );
+            for( int i = 8; i <= 31; i++ )
             {
                 SerializedProperty sp = layersProp.GetArrayElementAtIndex(i);
 
 
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("Layer " + i, GUILayout.MaxWidth(100));
-                EditorGUILayout.PropertyField(sp, GUIContent.none, GUILayout.Width(180));
-                if(layersObject.Layers[i].Length > 0)
-                    EditorGUILayout.LabelField("" + layersObject.Layers[i], EditorStyles.label, GUILayout.MaxWidth(200));
+                EditorGUILayout.LabelField( "Layer " + i, GUILayout.MaxWidth( 100 ) );
+                EditorGUILayout.PropertyField( sp, GUIContent.none, GUILayout.Width( 180 ) );
+                if( layersObject.Layers[ i ].Length > 0 )
+                    EditorGUILayout.LabelField( "" + layersObject.Layers[ i ], EditorStyles.label, GUILayout.MaxWidth( 200 ) );
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndScrollView();
             manager.ApplyModifiedProperties();
 
-            GUILayout.Space(5);
+            GUILayout.Space( 5 );
 
             //Set any default layers to the Game Default layers
-            if(GUILayout.Button("Add Game defaults (will not replace)"))
+            if( GUILayout.Button( "Add Game defaults (will not replace)" ) )
             {
-                for(int i = 8; i <= 31; i++)
+                for( int i = 8; i <= 31; i++ )
                 {
                     SerializedProperty sp = layersProp.GetArrayElementAtIndex(i);
 
-                    if(sp.stringValue.Length > 0)
+                    if( sp.stringValue.Length > 0 )
                         continue;
 
-                    if(layersObject.Layers[i].Length > 0)
-                        sp.stringValue = layersObject.Layers[i];
+                    if( layersObject.Layers[ i ].Length > 0 )
+                        sp.stringValue = layersObject.Layers[ i ];
                 }
                 manager.ApplyModifiedProperties();
             }
 
             //Set any default layers to the Game Default layers
-            if(GUILayout.Button("Set to Game defaults"))
+            if( GUILayout.Button( "Set to Game defaults" ) )
             {
-                for(int i = 8; i <= 31; i++)
+                for( int i = 8; i <= 31; i++ )
                 {
                     SerializedProperty sp = layersProp.GetArrayElementAtIndex(i);
 
-                    if(layersObject.Layers[i].Length > 0)
-                        sp.stringValue = layersObject.Layers[i];
+                    if( layersObject.Layers[ i ].Length > 0 )
+                        sp.stringValue = layersObject.Layers[ i ];
                 }
                 manager.ApplyModifiedProperties();
             }
 
-            if(GUILayout.Button("Close"))
+            if( GUILayout.Button( "Close" ) )
             {
                 this.Close();
             }
 
             Event e = Event.current;
-            switch(e.type)
+            switch( e.type )
             {
                 case EventType.KeyDown:
+                {
+                    if( Event.current.keyCode == ( KeyCode.Escape ) )
                     {
-                        if(Event.current.keyCode == (KeyCode.Escape))
-                        {
-                            this.Close();
-                        }
-                        break;
+                        this.Close();
                     }
+                    break;
+                }
             }
         }
     }
-}
 
 #endif
+}

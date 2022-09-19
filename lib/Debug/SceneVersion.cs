@@ -1,208 +1,177 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-
-#if UNITY_EDITOR
-using UnityEditor;
-namespace nv.editor
-{
-    [CustomEditor(typeof(SceneVersion))]
-    public class SceneVersion_Editor : Editor
-    {
-        SceneVersion _target;
-        bool _showDefault;
-
-        public override void OnInspectorGUI()
-        {
-            _target = (SceneVersion)target;
-
-            if(GUILayout.Button("Upgrade Release Version"))
-            {
-                _target.UpdateToNewPrimeVersion();
-            }
-            if(GUILayout.Button("Upgrade Build Version"))
-            {
-                _target.UpdateToNewMajorVersion();
-            }
-            _target.updateMinorOnSave = EditorGUILayout.Toggle("Update on Save", _target.updateMinorOnSave);
-
-            serializedObject.Update();
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("scenesInVersion"),true);
-            serializedObject.ApplyModifiedProperties();
-
-            _showDefault = EditorGUILayout.Toggle("Show Default Inspector", _showDefault);
-            if(_showDefault)
-                base.OnInspectorGUI();
-        }
-    }
-}
-#endif
+using System.Collections.Generic;
+using System.Linq;
 
 namespace nv
 {
     [ExecuteInEditMode]
     public class SceneVersion : MonoBehaviour
     {
-        [Header("Use the context menu options to update version")]
-        public Text primeVersion;
-        public Text majorVersion;
+        public bool showProjectVersion;
+        public bool showSceneVersion;
 
-        public int majorVersionDigits = 2;
+        public bool showProjectVersionDate;
+        public bool showSceneVersionDate;
 
-        public Text minorVersion;
+        public Text projectVersionLabel;
+        public Text sceneVersionLabel;
+        public Text projectVersion;
+        public Text sceneVersion;        
+        public Text projectDate;
+        public Text sceneDate;
 
-        public int minorVersionDigits = 4;
+        [SerializeField,HideInInspector]
+        List<Text> versionElements;
 
-        public GameObject textRoot;
+        //since this game object might end up being moved to an invalid scene at runtime
+        //save the name of the scene it's in to use as a reference during gameplay
+        [SerializeField, HideInInspector]
+        protected string originalSceneForVersion;
 
-        public bool updateMinorOnSave = true;
-
-        [Header("If not null, will display the date")]
-        public Text dateText;
-
-        [SceneAssetPathField]
-        public string[] scenesInVersion;
-
-        [SerializeField]
-        [HideInInspector]
-        bool[] _dirtyScenes;
-
-        static public void SetVisible()
+        void Reset()
         {
-            //GameObject.FindObjectOfType<SceneVersion>()
+            gameObject.GetOrAddComponent<Canvas>();
+            var grid = gameObject.GetOrAddComponent<GridLayoutGroup>();
+            grid.startAxis = GridLayoutGroup.Axis.Vertical;
+            grid.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+            grid.constraintCount = 2;
+            grid.cellSize = new Vector2( 115f, 20f );
+            gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2( 400, 40 );
+
+            versionElements = gameObject.GetComponentsInChildren<Text>().ToList();
+            while( versionElements.Count < 6 )
+            {
+                string name = "";
+                if( versionElements.Count == 0 )
+                {
+                    name = "projectVersionLabel";
+                }
+                else if( versionElements.Count == 1 )
+                {
+                    name = "sceneVersionLabel";
+                }
+                else if( versionElements.Count == 2 )
+                {
+                    name = "projectVersion";
+                }
+                else if( versionElements.Count == 3 )
+                {
+                    name = "sceneVersion";
+                }
+                else if( versionElements.Count == 4 )
+                {
+                    name = "projectDate";
+                }
+                else if( versionElements.Count == 5 )
+                {
+                    name = "sceneDate";
+                }
+                GameObject versionElement = new GameObject(name);
+                versionElement.transform.SetParent( transform );
+                versionElements.Add(versionElement.AddComponent<Text>());
+            }
+
+            projectVersionLabel = versionElements[ 0 ];
+            sceneVersionLabel = versionElements[ 1 ];
+            projectVersion = versionElements[ 2 ];
+            sceneVersion = versionElements[ 3 ];
+            projectDate = versionElements[ 4 ];
+            sceneDate = versionElements[ 5 ];
+
+            projectVersionLabel.text = "Project Version:";
+            sceneVersionLabel.text = "Scene Version:";
+
+            projectDate.horizontalOverflow = HorizontalWrapMode.Overflow;
+            sceneDate.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            UpdateText();
         }
 
-        //use this for releasing to QA or anywhere outside the local dev group
-        [ContextMenu("UpdateToNewPrimeVersion -- Release Update")]
-        public void UpdateToNewPrimeVersion()
+        void Awake()
         {
-            IncPrimeVersion();
-            majorVersion.text = "1";
-            minorVersion.text = "0";
-            majorVersion.text = majorVersion.text.PadLeft(majorVersionDigits, '0');
-            minorVersion.text = minorVersion.text.PadLeft(minorVersionDigits, '0');
-        }
+            gameObject.SetActive( false );
 
-        //use this each time a build or other large checkpoint is reached -- often used on perforce checkins
-        [ContextMenu("UpdateToNewMajorVersion -- Build Update")]
-        public void UpdateToNewMajorVersion()
-        {
-            IncMajorVersion();
-            minorVersion.text = "0";
-            minorVersion.text = minorVersion.text.PadLeft(minorVersionDigits, '0');
-        }
+            versionElements[ 0 ] = projectVersionLabel;
+            versionElements[ 1 ] = sceneVersionLabel;
+            versionElements[ 2 ] = projectVersion;
+            versionElements[ 3 ] = sceneVersion;
+            versionElements[ 4 ] = projectDate;
+            versionElements[ 5 ] = sceneDate;
 
-        public void IncPrimeVersion()
-        {
-            string primeVersionStr = primeVersion.text;
-
-            try
-            {
-                int version_num = System.Convert.ToInt32(primeVersionStr);
-
-                version_num++;
-
-                primeVersionStr = version_num.ToString();
-
-                primeVersion.text = primeVersionStr;
-            }
-            catch
-            {
-                //do nothing
-                Debug.Log("invalid prime version number format");
-            }
-        }
-
-        public void IncMajorVersion()
-        {
-            string majorVersionStr = majorVersion.text;
-
-            try
-            {
-                int version_num = System.Convert.ToInt32(majorVersionStr);
-
-                version_num++;
-
-                majorVersionStr = version_num.ToString();
-
-                majorVersionStr = majorVersionStr.PadLeft(majorVersionDigits, '0');
-
-                majorVersion.text = majorVersionStr;
-            }
-            catch
-            {
-                //do nothing
-                Debug.Log("invalid major version number format");
-            }
-        }
-
-        public void IncMinorVersion()
-        {
-            string minorVersionStr = minorVersion.text;
-
-            try
-            {
-                int version_num = System.Convert.ToInt32(minorVersionStr);
-
-                version_num++;
-
-                minorVersionStr = version_num.ToString();
-
-                minorVersionStr = minorVersionStr.PadLeft(minorVersionDigits, '0');
-
-                minorVersion.text = minorVersionStr;
-            }
-            catch
-            {
-                //do nothing
-                Debug.Log("invalid minor version number format");
-            }
-        }
-
-        bool IsSetup()
-        {
-            return primeVersion != null && majorVersion != null && minorVersion != null && textRoot != null;
+            UpdateText();
         }
 
         void Update()
         {
-            if(updateMinorOnSave == false)
-                return;
+            gameObject.SetActive( false );
 
-            if(IsSetup() != true)
-                return;
-
-#if UNITY_EDITOR
-
-            if(_dirtyScenes == null || _dirtyScenes.Length != scenesInVersion.Length)
-                _dirtyScenes = new bool[scenesInVersion.Length];
-
-            bool need_save = false;
-
-            for(int i = 0; i < _dirtyScenes.Length; ++i)
+            //TODO: get if this is a release build or not
+#if !DEBUG
+            if ( Application.isPlaying )
             {
-                if(UnityEditor.SceneManagement.EditorSceneManager.GetSceneByName(scenesInVersion[i]).isDirty == false
-                    && _dirtyScenes[i] == true)
-                    need_save = true;
+                versionElements.ForEach( x => x.gameObject.SetActive( false ) );
             }
-
-            //did they just save it?
-            if(need_save)
-            {
-                //update the minor version
-                IncMinorVersion();
-
-                //update the date
-                if(dateText != null)
-                    dateText.text = "Created: " + System.DateTime.Now.ToLongDateString();
-            }
-            for(int i = 0; i < scenesInVersion.Length; ++i)
-            {
-                _dirtyScenes[i] = UnityEditor.SceneManagement.EditorSceneManager.GetSceneByName(scenesInVersion[i]).isDirty;
-            }
-
+            else
 #endif
+            {
+                if (VersionManager.Instance.SceneVersion(gameObject) != "Unversioned")
+                    originalSceneForVersion = VersionManager.Instance.SceneVersion(gameObject);
+                versionElements.ForEach( x => x.gameObject.SetActive( true ) );
+                UpdateText();
+            }
+        }
 
+        void UpdateText()
+        {
+#if !DEBUG
+            return;
+#endif
+            if( showProjectVersion )
+                projectVersion.text = VersionManager.Instance.ProjectVersion;
+            else
+                projectVersion.gameObject.SetActive( false );
+
+            if(showSceneVersion)
+            {
+                if(Application.isPlaying)
+                    sceneVersion.text = VersionManager.Instance.SceneVersion(originalSceneForVersion);
+                else
+                    sceneVersion.text = VersionManager.Instance.SceneVersion(gameObject);
+            }
+            else
+            {
+                sceneVersion.gameObject.SetActive(false);
+            }
+
+            if( showProjectVersionDate )
+                projectDate.text = VersionManager.Instance.ProjectVersionDate;
+            else
+                projectDate.gameObject.SetActive( false );
+
+            if( showSceneVersionDate )
+                sceneDate.text = VersionManager.Instance.SceneVersionDate( gameObject );
+            else
+                sceneDate.gameObject.SetActive( false );
+
+            if( !showProjectVersion && !showProjectVersionDate )
+                projectVersionLabel.gameObject.SetActive( false );
+
+            if( !showSceneVersion && !showSceneVersionDate )
+                sceneVersionLabel.gameObject.SetActive( false );
+        }
+
+        private void OnEnable()
+        {
+            if(Application.isPlaying && Application.isEditor)
+            {
+#if DEBUG
+                string versionString = "Version: " + VersionManager.Instance.ProjectVersion;
+                string versionDate = "Created: " + VersionManager.Instance.ProjectVersionDate;
+                Dev.Log("Starting: " + Application.productName + " " + versionString + " " + versionDate);
+#endif
+            }
         }
     }
 }

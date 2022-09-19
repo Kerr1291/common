@@ -6,6 +6,9 @@ using System.Linq;
 using UnityEngine.EventSystems;
 using System.Reflection;
 using System;
+#if UNITY_EDITOR
+using UnityEditor.Events;
+#endif
 
 namespace nv
 {
@@ -16,54 +19,74 @@ namespace nv
     [ExecuteInEditMode]
     public class SyncMemberToUI : MonoBehaviour
     {
-        /// <summary>
-        /// The owner of the member reference.
-        /// </summary>
         [SerializeField]
-        protected UnityEngine.Object target;
+        protected UnityEngine.Events.UnityEventCallState updateMode = UnityEngine.Events.UnityEventCallState.EditorAndRuntime;
 
         /// <summary>
         /// The owner of the target (The game object in the case where the target is a component). May be the same reference as target.
         /// </summary>
         [SerializeField]
-        protected UnityEngine.Object rootTarget;
+        protected UnityEngine.Object rootGetTarget;
 
         /// <summary>
-        /// The member that will be reflected into the UI
+        /// The owner of the member reference.
         /// </summary>
         [SerializeField]
-        protected SerializableMemberInfo targetRef;
+        protected UnityEngine.Object targetGet;
+
+        /// <summary>
+        /// The owner of the target (The game object in the case where the target is a component). May be the same reference as target.
+        /// </summary>
+        [SerializeField]
+        protected UnityEngine.Object rootSetTarget;
+
+        /// <summary>
+        /// The owner of the member reference.
+        /// </summary>
+        [SerializeField]
+        protected UnityEngine.Object targetSet;
+
+        /// <summary>
+        /// The member that will be reflected and used to populate the UI
+        /// </summary>
+        [SerializeField]
+        protected SerializableMemberInfo targetGetRef;
 
         /// <summary>
         /// The member that will be updated if the target is changed or interacted with. Used for things like input fields, toggles, etc.
-        /// May be the same as targetRef.
+        /// May be the same as targetGetRef.
         /// </summary>
         [SerializeField]
-        protected SerializableMemberInfo targetSetRef;
-
-        /// <summary>
-        /// Used by the Dropdown list UI to populate the choices from a member.
-        /// </summary>
-        [SerializeField]
-        protected bool useListSourceRef;
-
-        /// <summary>
-        /// Used by the Dropdown list UI to populate the choices from a count.
-        /// </summary>
-        [SerializeField]
-        protected bool useListSourceCount;
-
-        /// <summary>
-        /// Used by the Dropdown list UI to populate the choices from this member reference. Requires useListSourceRef = true
-        /// </summary>
-        [SerializeField]
-        protected SerializableMemberInfo listSourceRef;
+        protected SerializableMemberInfo targetSetRef;   
 
         /// <summary>
         /// The UI element that will display the value of targetRef and provide interaction for targetSetRef.
         /// </summary>
         [SerializeField]
         protected UnityEngine.Object uiElement;
+
+        public virtual void SetUIEelement(UnityEngine.Object uiElement)
+        {
+            this.uiElement = uiElement;
+        }
+
+        public virtual void SetUISourceTarget(GameObject targetOwner, UnityEngine.Object targetComponent, MemberInfo targetMember, UnityEngine.Events.UnityEventCallState updateMode = UnityEngine.Events.UnityEventCallState.RuntimeOnly)
+        {
+            rootGetTarget = targetOwner;
+            targetGet = targetComponent;
+            targetGetRef = new SerializableMemberInfo();
+            targetGetRef.Info = targetMember;
+            this.updateMode = updateMode;
+        }
+
+        public virtual void SetUIInputTarget(GameObject targetOwner, UnityEngine.Object targetComponent, MemberInfo targetMember, UnityEngine.Events.UnityEventCallState updateMode = UnityEngine.Events.UnityEventCallState.RuntimeOnly)
+        {
+            rootSetTarget = targetOwner;
+            targetSet = targetComponent;
+            targetSetRef = new SerializableMemberInfo();
+            targetSetRef.Info = targetMember;
+            this.updateMode = updateMode;
+        }
 
         protected virtual void Reset()
         {
@@ -77,6 +100,11 @@ namespace nv
             RegisterUICallbacks();
         }
 
+        protected virtual void OnDestroy()
+        {
+            UnRegisterUICallbacks();
+        }
+
         protected virtual void Setup()
         {
             uiElement = GetComponents<UIBehaviour>().Where(x =>
@@ -86,11 +114,15 @@ namespace nv
             (x as Toggle != null) ||
             (x as Scrollbar != null) ||
             (x as Dropdown != null)).FirstOrDefault();
+            if( uiElement == null )
+                uiElement = GetComponent<TextMesh>();
+            if( uiElement == null )
+                uiElement = GetComponent<TMPro.TextMeshPro>();
         }
 
         protected virtual void SetValueFromInputField(string value)
         {
-            object currentValue = targetRef.GetValue(target);
+            object currentValue = targetSetRef.GetValue(targetSet);
             if(currentValue.ToString() == value)
                 return;
 
@@ -123,127 +155,140 @@ namespace nv
             }
 
             if(ivalue != null && ivalue.HasValue)
-                targetSetRef.SetValue(target, ivalue.Value);
+                targetSetRef.SetValue(targetSet, ivalue.Value);
             else if(fvalue != null && fvalue.HasValue)
-                targetSetRef.SetValue(target, fvalue.Value);
+                targetSetRef.SetValue(targetSet, fvalue.Value);
             else
-                targetSetRef.SetValue(target, value);
+                targetSetRef.SetValue(targetSet, value);
         }
 
         protected virtual void SetValueFromSliderOrScrollbar(float value)
         {
-            if(targetRef.GetValue<float>(target) == value)
+            //only update if the value has changed
+            if(Mathf.Approximately(targetSetRef.GetValue<float>(targetSet),value))
                 return;
 
-            targetSetRef.SetValue(target, value);
+            targetSetRef.SetValue(targetSet, value);
         }
 
         protected virtual void SetValueFromToggle(bool value)
         {
-            if(targetRef.GetValue<bool>(target) == value)
+            if(targetSetRef.GetValue<bool>(targetSet) == value)
                 return;
 
-            targetSetRef.SetValue(target, value);
+            targetSetRef.SetValue(targetSet, value);
         }
 
         protected virtual void SetValueFromDropdown(int value)
         {
-            if(targetRef.GetValue<int>(target) == value)
+            object target = targetGetRef.GetValue(targetGet);
+            object listElement = GetValueFromIterableType(target,value);
+
+            if(targetSetRef.GetValue(targetSet) == listElement)
                 return;
 
-            targetSetRef.SetValue(target, value);
+            targetSetRef.SetValue(targetSet, listElement);
         }
 
-        protected virtual void RegisterUICallbacks()
-        {
-            RegisterInputFieldCallbacks();
-            RegisterToggleCallbacks();
-            RegisterSliderCallbacks();
-            RegisterScrollbarCallbacks();
-            RegisterDropdownCallbacks();
-        }
 
-        protected virtual void RegisterDropdownCallbacks()
-        {
-            var element = uiElement as Dropdown;
-            if(element != null)
-            {
-                element.onValueChanged.RemoveListener(SetValueFromDropdown);
-                element.onValueChanged.AddListener(SetValueFromDropdown);
-            }
-        }
 
-        protected virtual void RegisterScrollbarCallbacks()
-        {
-            var element = uiElement as Scrollbar;
-            if(element != null)
-            {
-                element.onValueChanged.RemoveListener(SetValueFromSliderOrScrollbar);
-                element.onValueChanged.AddListener(SetValueFromSliderOrScrollbar);
-            }
-        }
-
-        protected virtual void RegisterSliderCallbacks()
-        {
-            var element = uiElement as Slider;
-            if(element != null)
-            {
-                element.onValueChanged.RemoveListener(SetValueFromSliderOrScrollbar);
-                element.onValueChanged.AddListener(SetValueFromSliderOrScrollbar);
-            }
-        }
-
-        protected virtual void RegisterToggleCallbacks()
-        {
-            var element = uiElement as Toggle;
-            if(element != null)
-            {
-                element.onValueChanged.RemoveListener(SetValueFromToggle);
-                element.onValueChanged.AddListener(SetValueFromToggle);
-            }
-        }
-
-        protected virtual void RegisterInputFieldCallbacks()
-        {
-            var element = uiElement as InputField;
-            if(element != null)
-            {
-                element.onEndEdit.RemoveListener(SetValueFromInputField);
-                element.onEndEdit.AddListener(SetValueFromInputField);
-            }
-        }
 
         protected virtual void LateUpdate()
         {
-            UpdateUIValue();
+            if(updateMode == UnityEngine.Events.UnityEventCallState.EditorAndRuntime && Application.isEditor && !Application.isPlaying)
+            {
+                UpdateUIValue();
+            }
+            else if((updateMode == UnityEngine.Events.UnityEventCallState.EditorAndRuntime || updateMode == UnityEngine.Events.UnityEventCallState.RuntimeOnly) && Application.isPlaying)
+            {
+                UpdateUIValue();
+            }
+            else if(updateMode == UnityEngine.Events.UnityEventCallState.Off)
+            {
+                //???
+            }
         }
 
         protected virtual void UpdateUIValue()
         {
-            if(target == null || rootTarget == null || targetRef.Info == null)
+            if(targetGet == null || rootGetTarget == null || targetGetRef.Info == null)
                 return;
 
-            object targetValue = targetRef.GetValue(target);
+            object newTargetValue = targetGetRef.GetValue(targetGet);
+            object oldTargetValue = null;
 
-            TryUpdateTextUI(targetValue);
-            TryUpdateInputFieldUI(targetValue);
-            TryUpdateToggleUI(targetValue);
-            TryUpdateSliderUI(targetValue);
-            TryUpdateScrollbarUI(targetValue);
-            TryUpdateDropdownUI(targetValue);
+            try
+            {
+                oldTargetValue = targetSetRef.GetValue(targetSet);
+            }
+            catch(Exception)
+            {
+                oldTargetValue = GetValueFromUI(newTargetValue);
+            }
+
+            //if(targetSet == null || rootSetTarget == null || targetSetRef.Info == null)
+            //{
+            //    oldTargetValue = GetValueFromUI(newTargetValue);
+            //}
+
+            TryUpdateTextUI(oldTargetValue, newTargetValue);
+            TryUpdateTextMeshUI(oldTargetValue, newTargetValue);
+            TryUpdateTextMeshProUI(oldTargetValue, newTargetValue);
+            //TryUpdateArgOSTextMeshUI(oldTargetValue, newTargetValue);
+            TryUpdateInputFieldUI(oldTargetValue, newTargetValue);
+            TryUpdateToggleUI(oldTargetValue, newTargetValue);
+            TryUpdateSliderUI(oldTargetValue, newTargetValue);
+            TryUpdateScrollbarUI(oldTargetValue, newTargetValue);
+            TryUpdateDropdownUI(oldTargetValue, newTargetValue);
         }
 
-        protected virtual void TryUpdateScrollbarUI(object targetValue)
+        protected virtual object GetValueFromUI(object newTargetValue)
         {
-            if(targetValue == null)
-                return;
+            uiElement = GetComponents<UIBehaviour>().Where(x =>
+            (x as Text != null) ||
+            (x as InputField != null) ||
+            (x as Slider != null) ||
+            (x as Toggle != null) ||
+            (x as Scrollbar != null) ||
+            (x as Dropdown != null)).FirstOrDefault();
+            if(uiElement == null)
+                uiElement = GetComponent<TextMesh>();
+            if(uiElement == null)
+                uiElement = GetComponent<TMPro.TextMeshPro>();
 
+            if(uiElement != null)
+            {
+                if((uiElement as Text) != null)
+                    return (uiElement as Text).text;
+                else if((uiElement as TextMesh) != null)
+                    return (uiElement as TextMesh).text;
+                else if((uiElement as TMPro.TextMeshPro) != null)
+                    return (uiElement as TMPro.TextMeshPro).text;
+                else if((uiElement as InputField) != null)
+                    return (uiElement as InputField).text;
+                else if((uiElement as Slider) != null)
+                    return (uiElement as Slider).value;
+                else if((uiElement as Toggle) != null)
+                    return (uiElement as Toggle).isOn;
+                else if((uiElement as Scrollbar) != null)
+                    return (uiElement as Scrollbar).value;
+                else if((uiElement as Dropdown) != null)
+                    return GetValueFromIterableType(newTargetValue, (uiElement as Dropdown).value);
+            }
+
+            return null;
+        }
+
+        protected virtual void TryUpdateScrollbarUI(object oldTargetValue, object newTargetValue)
+        {
             var element = uiElement as Scrollbar;
             if(element != null)
             {
                 try
                 {
-                    element.value = (float)targetValue;
+                    if(Mathf.Approximately((float)oldTargetValue, (float)newTargetValue))
+                        return;
+                    element.value = (float)newTargetValue;
                 }
                 catch(System.InvalidCastException)
                 {
@@ -253,11 +298,8 @@ namespace nv
             }
         }
 
-        protected virtual void TryUpdateSliderUI(object targetValue)
+        protected virtual void TryUpdateSliderUI(object oldTargetValue, object newTargetValue)
         {
-            if(targetValue == null)
-                return;
-
             var element = uiElement as Slider;
             if(element != null)
             {
@@ -267,7 +309,9 @@ namespace nv
                 {
                     try
                     {
-                        element.value = (float)targetValue;
+                        if(Mathf.Approximately((float)oldTargetValue, (float)newTargetValue))
+                            return;
+                        element.value = (float)newTargetValue;
                         success = true;
                     }
                     catch(System.InvalidCastException)
@@ -279,7 +323,9 @@ namespace nv
                 {
                     try
                     {
-                        element.value = (int)targetValue;
+                        if(Mathf.Approximately((int)oldTargetValue, (int)newTargetValue))
+                            return;
+                        element.value = (int)newTargetValue;
                         success = true;
                     }
                     catch(System.InvalidCastException)
@@ -291,11 +337,8 @@ namespace nv
             }
         }
 
-        protected virtual void TryUpdateToggleUI(object targetValue)
+        protected virtual void TryUpdateToggleUI(object oldTargetValue, object newTargetValue)
         {
-            if(targetValue == null)
-                return;
-
             var element = uiElement as Toggle;
             if(element != null)
             {
@@ -304,7 +347,9 @@ namespace nv
                 {
                     try
                     {
-                        element.isOn = (bool)targetValue;
+                        if((bool)oldTargetValue == (bool)newTargetValue)
+                            return;
+                        element.isOn = (bool)newTargetValue;
                         success = true;
                     }
                     catch(System.InvalidCastException)
@@ -316,128 +361,462 @@ namespace nv
             }
         }
 
-        protected virtual void TryUpdateInputFieldUI(object targetValue)
+        protected virtual void TryUpdateInputFieldUI(object oldTargetValue, object newTargetValue)
         {
-            if(targetValue == null)
-                return;
-
             if(uiElement as InputField != null)
             {
-                var stringValue = targetValue.ToString();
                 var element = uiElement as InputField;
-                if(element != null && !element.isFocused && stringValue != element.text)
+                try
                 {
-                    element.text = stringValue;
+                    string newValue = newTargetValue == null ? "null" : newTargetValue.ToString();
+                    string oldValue = oldTargetValue == null ? "null" : oldTargetValue.ToString();
+                    if(string.Compare(oldValue, newValue) != 0)
+                    {
+                        if(element != null && !element.isFocused && string.Compare(newValue,element.text) != 0)
+                        {
+                            element.text = newValue;
+                        }
+                    }
+                }
+                catch(System.NullReferenceException)
+                {
+                    element.text = "null";
                 }
             }
         }
 
-        protected virtual void TryUpdateTextUI(object targetValue)
+        protected virtual void TryUpdateTextUI(object oldTargetValue, object newTargetValue)
         {
-            if(targetValue == null)
-                return;
-
             if(uiElement as Text != null)
             {
-                var stringValue = targetValue.ToString();
                 var element = uiElement as Text;
-                if(element != null && stringValue != element.text)
-                    element.text = stringValue;
+                try
+                {
+                    string newValue = newTargetValue == null ? "null" : newTargetValue.ToString();
+                    string oldValue = oldTargetValue == null ? "null" : oldTargetValue.ToString();
+                    if(string.Compare(oldValue, newValue) != 0)
+                    {
+                        if(element != null && string.Compare(newValue, element.text) != 0)
+                        {
+                            element.text = newValue;
+                        }
+                    }
+                }
+                catch(System.NullReferenceException)
+                {
+                    element.text = "null";
+                }
             }
         }
 
-        protected virtual void TryUpdateDropdownUI(object targetValue)
+        protected virtual void TryUpdateTextMeshUI( object oldTargetValue, object newTargetValue)
         {
-            if(targetValue == null)
+            if( uiElement as TextMesh != null )
+            {
+                var element = uiElement as TextMesh;
+                try
+                {
+                    string newValue = newTargetValue == null ? "null" : newTargetValue.ToString();
+                    string oldValue = oldTargetValue == null ? "null" : oldTargetValue.ToString();
+                    if(string.Compare(oldValue, newValue) != 0)
+                    {
+                        if(element != null && string.Compare(newValue, element.text) != 0)
+                        {
+                            element.text = newValue;
+                        }
+                    }
+                }
+                catch(System.NullReferenceException)
+                {
+                    element.text = "null";
+                }
+            }
+        }
+
+        protected virtual void TryUpdateTextMeshProUI( object oldTargetValue, object newTargetValue)
+        {
+            if( uiElement as TMPro.TextMeshPro != null )
+            {
+                var element = uiElement as TMPro.TextMeshPro;
+                try
+                {
+                    string newValue = newTargetValue == null ? "null" : newTargetValue.ToString();
+                    string oldValue = oldTargetValue == null ? "null" : oldTargetValue.ToString();
+                    if(string.Compare(oldValue, newValue) != 0)
+                    {
+                        if(element != null && string.Compare(newValue, element.text) != 0)
+                        {
+                            element.text = newValue;
+                        }
+                    }
+                }
+                catch(System.NullReferenceException)
+                {
+                    element.text = "null";
+                }
+            }
+        }
+
+        //protected virtual void TryUpdateArgOSTextMeshUI( object oldTargetValue, object newTargetValue)
+        //{
+        //    if( uiElement as ArgOS.Graphics.ArgOSTextMesh != null )
+        //    {
+        //        var element = uiElement as ArgOS.Graphics.ArgOSTextMesh;
+        //        try
+        //        {
+        //            string newValue = newTargetValue == null ? "null" : newTargetValue.ToString();
+        //            string oldValue = oldTargetValue == null ? "null" : oldTargetValue.ToString();
+        //            if(string.Compare(oldValue, newValue) != 0)
+        //            {
+        //                if(element != null && string.Compare(newValue, element.Text.ToString()) != 0)
+        //                {
+        //                    element.Text.Set(newValue);
+        //                }
+        //            }
+        //        }
+        //        catch(System.NullReferenceException)
+        //        {
+        //            element.Text.Set("null");
+        //        }
+        //    }
+        //}
+
+        protected virtual void TryUpdateDropdownUI(object currentTargetValue, object listValue)
+        {
+            if( uiElement == null )
+                uiElement = GetComponent<TextMesh>();
+            if( uiElement == null )
+                uiElement = GetComponent<TMPro.TextMeshPro>();
+            if(listValue == null)
                 return;
 
             var element = uiElement as Dropdown;
             if(element != null)
             {
-                if(listSourceRef.Info != null && listSourceRef.Info.ReflectedType != target.GetType())
-                    return;
-
-                if(useListSourceRef)
-                    useListSourceCount = false;
+                //object listElement = GetValueFromIterableType(listValue, value);
+                
+                //if(useListSourceRef)
+                //    useListSourceCount = false;
 
                 try
                 {
-                    if(useListSourceCount && listSourceRef.Info != null)
-                    {
-                        int count = (int)listSourceRef.GetValue(target);
-                        if(element.options.Count != count)
-                        {
-                            element.options = new List<Dropdown.OptionData>();
+                    //if(useListSourceCount && listSourceRef.Info != null)
+                    //{
+                    //    int count = (int)listSourceRef.GetValue(target);
+                    //    if(element.options.Count != count)
+                    //    {
+                    //        element.options = new List<Dropdown.OptionData>();
 
-                            for(int i = 0; i < count; ++i)
+                    //        for(int i = 0; i < count; ++i)
+                    //        {
+                    //            element.options.Add(new Dropdown.OptionData(i.ToString()));
+                    //        }
+                    //    }
+                    //}
+                    
+                    if(listValue != null && listValue.GetType().IsArray)
+                    {
+                        Array array = listValue as Array;
+                        for(int i = 0; i < array.Length || i < element.options.Count; ++i)
+                        {
+                            if(i < array.Length && i < element.options.Count)
                             {
-                                element.options.Add(new Dropdown.OptionData(i.ToString()));
+                                object value = array.GetValue(i);
+                                element.options[i].text = (value == null ? "null" : value.ToString());
+                            }
+                            else if(i < array.Length) //but bigger than the dropdown options...
+                            {
+                                object value = array.GetValue(i);
+                                element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
+                            }
+                            else if(i < element.options.Count)//but bigger than the array source...
+                            {
+                                element.options.RemoveRange(i, element.options.Count - i);
+                            }
+                        }
+                    }
+                    else if(typeof(IList).IsAssignableFrom(listValue == null ? null : listValue.GetType()))
+                    {
+                        IList list = listValue as IList;
+                        for(int i = 0; i < list.Count || i < element.options.Count; ++i)
+                        {
+                            if(i < list.Count && i < element.options.Count)
+                            {
+                                object value = list[i];
+                                element.options[i].text = (value == null ? "null" : value.ToString());
+                            }
+                            else if(i < list.Count) //but bigger than the dropdown options...
+                            {
+                                object value = list[i];
+                                element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
+                            }
+                            else if(i < element.options.Count)//but bigger than the array source...
+                            {
+                                element.options.RemoveRange(i, element.options.Count - i);
+                            }
+                        }
+                    }
+                    else if(typeof(IEnumerable).IsAssignableFrom(listValue == null ? null : listValue.GetType()))
+                    {
+                        int enumerableMax = 1000;
+                        var iterable = (listValue as IEnumerable);
+                        var iterator = iterable.GetEnumerator();
+                        bool isGood = iterator.MoveNext();
+                        for(int i = 0; isGood || i < element.options.Count; ++i, isGood = iterator.MoveNext())
+                        {
+                            if(i > enumerableMax)
+                                break;
+
+                            if(isGood && i < element.options.Count)
+                            {
+                                object value = iterator.Current;
+                                element.options[i].text = (value == null ? "null" : value.ToString());
+                            }
+                            else if(isGood) //but bigger than the dropdown options...
+                            {
+                                object value = iterator.Current;
+                                element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
+                            }
+                            else if(i < element.options.Count)//but bigger than the array source...
+                            {
+                                element.options.RemoveRange(i, element.options.Count - i);
                             }
                         }
                     }
 
-                    if(useListSourceRef && listSourceRef.Info != null)
-                    {
-                        if(listSourceRef.Info.GetTypeFromMember().IsArray)
-                        {
-                            Array data = listSourceRef.GetValue(target) as Array;
-
-                            if(element.options.Count != data.Length)
-                            {
-                                element.options = new List<Dropdown.OptionData>();
-
-                                foreach(var value in data)
-                                {
-                                    element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
-                                }
-                            }
-                            else
-                            {
-                                int i = 0;
-                                foreach(var value in data)
-                                {
-                                    element.options[i].text = (value == null ? "null" : value.ToString());
-                                    ++i;
-                                }
-                            }
-                        }
-                        else if(listSourceRef.Info.GetTypeFromMember().GetInterfaces().Contains(typeof(IList)))
-                        {
-                            var listData = listSourceRef.GetValue(target);
-                            var items = listData.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Instance).Where(x => x as FieldInfo != null && x.Name.Contains("_items")).FirstOrDefault() as FieldInfo;
-                            var arrayData = items.GetValue(listData);
-
-                            //get the list's internal data array
-                            Array data = items.GetValue(listData) as Array;
-
-                            if(element.options.Count != data.Length)
-                            {
-                                element.options = new List<Dropdown.OptionData>();
-
-                                foreach(var value in data)
-                                {
-                                    element.options.Add(new Dropdown.OptionData(value == null ? "null" : value.ToString()));
-                                }
-                            }
-                            else
-                            {
-                                int i = 0;
-                                foreach(var value in data)
-                                {
-                                    element.options[i].text = (value == null ? "null" : value.ToString());
-                                    ++i;
-                                }
-                            }
-                        }
-                    }
-
-                    element.value = (int)targetValue;
+                    int? index = GetIndexOfValueFromIterableType(listValue, currentTargetValue);
+                    element.value = index == null ? 0 : index.Value;
                 }
                 catch(System.InvalidCastException)
                 {
                     Debug.Log("Dropdown needs an int type to select the dropdown index");
                     element.value = 0;
                 }
+            }
+        }
+
+        protected object GetValueFromIterableType(object target, int index)
+        {
+            object listElement = null;
+            if(target != null && target.GetType().IsArray)
+            {
+                Array array = target as Array;
+                listElement = array.GetValue(index);
+            }
+            else if(typeof(IList).IsAssignableFrom(target == null ? null : target.GetType()))
+            {
+                listElement = (target as IList)[index];
+            }
+            else if(typeof(IEnumerable).IsAssignableFrom(target == null ? null : target.GetType()))
+            {
+                var iterable = (target as IEnumerable);
+                int i = 0;
+                foreach(var element in iterable)
+                {
+                    if(i == index)
+                    {
+                        listElement = element;
+                        break;
+                    }
+                    ++i;
+                }
+            }
+            return listElement;
+        }
+
+        protected int? GetIndexOfValueFromIterableType(object iterableObject, object value)
+        {
+            if(iterableObject != null && iterableObject.GetType().IsArray)
+            {
+                Array array = iterableObject as Array;
+                for(int i = 0; i < array.Length; ++i)
+                {
+                    if(array.GetValue(i) == value)
+                        return i;
+                }
+            }
+            else if(iterableObject != null && typeof(IList).IsAssignableFrom(iterableObject.GetType()))
+            {
+                IList list = iterableObject as IList;
+                for(int i = 0; i < list.Count; ++i)
+                {
+                    if(list[i] == value)
+                        return i;
+                }
+            }
+            else if(iterableObject != null && typeof(IEnumerable).IsAssignableFrom(iterableObject.GetType()))
+            {
+                var iterable = (iterableObject as IEnumerable);
+                int i = 0;
+                foreach(var element in iterable)
+                {
+                    if(element == value)
+                    {
+                        return i;
+                    }
+                    ++i;
+                }
+            }
+            return null;
+        }
+
+        protected virtual void RegisterUICallbacks()
+        {
+            RegisterInputFieldCallbacks();
+            RegisterToggleCallbacks();
+            RegisterSliderCallbacks();
+            RegisterScrollbarCallbacks();
+            RegisterDropdownCallbacks();
+        }
+
+        protected virtual void UnRegisterUICallbacks()
+        {
+            UnRegisterInputFieldCallbacks();
+            UnRegisterToggleCallbacks();
+            UnRegisterSliderCallbacks();
+            UnRegisterScrollbarCallbacks();
+            UnRegisterDropdownCallbacks();
+        }
+
+        protected virtual void RegisterDropdownCallbacks()
+        {
+            var element = uiElement as Dropdown;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<int>(element.onValueChanged, SetValueFromDropdown);
+                UnityEventTools.AddPersistentListener<int>(element.onValueChanged, SetValueFromDropdown);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromDropdown);
+                element.onValueChanged.AddListener(SetValueFromDropdown);
+#endif
+            }
+        }
+
+        protected virtual void RegisterScrollbarCallbacks()
+        {
+            var element = uiElement as Scrollbar;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<float>(element.onValueChanged, SetValueFromSliderOrScrollbar);
+                UnityEventTools.AddPersistentListener<float>(element.onValueChanged, SetValueFromSliderOrScrollbar);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromSliderOrScrollbar);
+                element.onValueChanged.AddListener(SetValueFromSliderOrScrollbar);
+#endif
+            }
+        }
+
+        protected virtual void RegisterSliderCallbacks()
+        {
+            var element = uiElement as Slider;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<float>(element.onValueChanged, SetValueFromSliderOrScrollbar);
+                UnityEventTools.AddPersistentListener<float>(element.onValueChanged, SetValueFromSliderOrScrollbar);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromSliderOrScrollbar);
+                element.onValueChanged.AddListener(SetValueFromSliderOrScrollbar);
+#endif
+            }
+        }
+
+        protected virtual void RegisterToggleCallbacks()
+        {
+            var element = uiElement as Toggle;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<bool>(element.onValueChanged, SetValueFromToggle);
+                UnityEventTools.AddPersistentListener<bool>(element.onValueChanged, SetValueFromToggle);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromToggle);
+                element.onValueChanged.AddListener(SetValueFromToggle);
+#endif
+            }
+        }
+
+        protected virtual void RegisterInputFieldCallbacks()
+        {
+            var element = uiElement as InputField;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<string>(element.onEndEdit, SetValueFromInputField);
+                UnityEventTools.AddPersistentListener<string>(element.onEndEdit, SetValueFromInputField);
+#else
+                element.onEndEdit.RemoveListener(SetValueFromInputField);
+                element.onEndEdit.AddListener(SetValueFromInputField);
+#endif
+            }
+        }
+
+
+
+        protected virtual void UnRegisterDropdownCallbacks()
+        {
+            var element = uiElement as Dropdown;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<int>(element.onValueChanged, SetValueFromDropdown);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromDropdown);
+#endif
+            }
+        }
+
+        protected virtual void UnRegisterScrollbarCallbacks()
+        {
+            var element = uiElement as Scrollbar;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<float>(element.onValueChanged, SetValueFromSliderOrScrollbar);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromSliderOrScrollbar);
+#endif
+            }
+        }
+
+        protected virtual void UnRegisterSliderCallbacks()
+        {
+            var element = uiElement as Slider;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<float>(element.onValueChanged, SetValueFromSliderOrScrollbar);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromSliderOrScrollbar);
+#endif
+            }
+        }
+
+        protected virtual void UnRegisterToggleCallbacks()
+        {
+            var element = uiElement as Toggle;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<bool>(element.onValueChanged, SetValueFromToggle);
+#else
+                element.onValueChanged.RemoveListener(SetValueFromToggle);
+#endif
+            }
+        }
+
+        protected virtual void UnRegisterInputFieldCallbacks()
+        {
+            var element = uiElement as InputField;
+            if(element != null)
+            {
+#if UNITY_EDITOR
+                UnityEventTools.RemovePersistentListener<string>(element.onEndEdit, SetValueFromInputField);
+#else
+                element.onEndEdit.RemoveListener(SetValueFromInputField);
+#endif
             }
         }
     }

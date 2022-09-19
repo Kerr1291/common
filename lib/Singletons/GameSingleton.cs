@@ -1,9 +1,16 @@
 ﻿using UnityEngine;
+using System.Linq;
 
 namespace nv
 {
     public abstract class GameSingleton : MonoBehaviour
     {
+        public abstract string DefaultName
+        {
+            get;
+        }
+		
+        public abstract void OnCreate(); 
     }
 
     ///Implementation taken from: http://wiki.unity3d.com/index.php?title=Singleton
@@ -14,7 +21,7 @@ namespace nv
     /// 
     /// As a note, this is made as MonoBehaviour because we need Coroutines.
     /// </summary>
-    public class GameSingleton<T> : GameSingleton where T : MonoBehaviour
+    public class GameSingleton<T> : GameSingleton where T : GameSingleton
     {
         private static T _instance;
 
@@ -24,21 +31,14 @@ namespace nv
         {
             get
             {
-                if(applicationIsQuitting)
-                {
-                    Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
-                        "' already destroyed on application quit." +
-                        " Won't create again - returning null.");
-                    return null;
-                }
-
-                lock (_lock)
+                lock(_lock)
                 {
                     if(_instance == null)
                     {
-                        _instance = (T)FindObjectOfType(typeof(T));
+                        var instances = GameObjectExtensions.FindObjectsOfType<T>(true);
+                        _instance = instances.FirstOrDefault();
 
-                        if(FindObjectsOfType(typeof(T)).Length > 1)
+                        if( instances.Count > 1)
                         {
                             Debug.LogError("[Singleton] Something went really wrong " +
                                 " - there should never be more than 1 singleton!" +
@@ -48,17 +48,20 @@ namespace nv
 
                         if(_instance == null)
                         {
+                            if(applicationIsQuitting)
+                            {
+                                Debug.LogWarning("[Singleton] Instance '" + typeof(T) +
+                                    "' already destroyed on application quit." +
+                                    " Won't create again - returning null.");
+                                return null;
+                            }
+
                             GameObject singleton = new GameObject();
                             _instance = singleton.AddComponent<T>();
-                            singleton.name = "[Singleton] " + typeof(T).ToString();
-
-                            DontDestroyOnLoad(singleton);
-
-                            Debug.Log("[Singleton] An instance of " + typeof(T) +
-                                " is needed in the scene, so '" + singleton +
-                                "' was created with DontDestroyOnLoad.");
+                            _instance.OnCreate();
                         }
-                        else {
+                        else
+                        {
                             Debug.Log("[Singleton] Using instance already created: " +
                                 _instance.gameObject.name);
                         }
@@ -82,6 +85,27 @@ namespace nv
         public virtual void OnDestroy()
         {
             applicationIsQuitting = true;
+        }
+
+        public override string DefaultName
+        {
+            get
+            {
+                return "[Singleton] " + typeof(T).ToString();
+            }
+        }
+
+        public override void OnCreate()
+        {
+            name = DefaultName;
+            if(Application.isPlaying)
+            {
+                DontDestroyOnLoad(gameObject);
+
+                Debug.Log("[Singleton] An instance of " + typeof(T) +
+                    " is needed in the scene, so '" + gameObject +
+                    "' was created with DontDestroyOnLoad.");
+            }
         }
     }
 

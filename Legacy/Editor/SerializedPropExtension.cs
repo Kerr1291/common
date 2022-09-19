@@ -29,9 +29,9 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace nv
+namespace nv.editor
 {
-	internal static class SerializedPropExtension
+	public static class SerializedPropExtension
 	{
 		#region Simple string path based extensions
 		/// <summary>
@@ -179,13 +179,14 @@ namespace nv
 			return field.FieldType;
 		}
 
-		/// <summary>
-		/// Uses reflection to get the actual data instance of the parent of a SerializedProperty
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="prop"></param>
-		/// <returns></returns>
-		public static T GetParent<T>(this SerializedProperty prop)
+        /// <summary>
+        /// Uses reflection to get the actual data instance of the parent of a SerializedProperty
+        /// https://answers.unity.com/questions/425012/get-the-instance-the-serializedproperty-belongs-to.html
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="prop"></param>
+        /// <returns></returns>
+        public static T GetParent<T>(this SerializedProperty prop)
 		{
 			var path = prop.propertyPath.Replace(".Array.data[", "[");
 			object obj = prop.serializedObject.targetObject;

@@ -9,10 +9,10 @@ namespace nv
     {
         [Header("If enabled will update every frame (may cause performance issues)")]
         [SerializeField]
-        private bool debugCheckAlways = false;
+        public bool checkEachFrame = false;
         [Header("If enabled show the current state of the caster)")]
         [SerializeField]
-        private bool debug = false;
+        public bool debug = false;
         Color debugColor = Color.white;
 
         [SerializeField]
@@ -41,8 +41,23 @@ namespace nv
         List<Transform> _hits = new List<Transform>();
 
         [Header("Optimize by using a box collider?")]
-        public bool useBoxColliderCache = false;
-        bool _box_cached = false;
+        [SerializeField]
+        bool useBoxColliderCache = false;
+
+        public bool UseBoxColliderCache {
+            get {
+                return useBoxColliderCache;
+            }
+            set {
+                useBoxColliderCache = value;
+                SyncBoxColliderForOptimization();
+            }
+        }
+
+        
+
+        //bool _box_cached = false;
+        bool raycastDirty = false;
 
         public List<Collider> ignoreList;
         public List<Collider2D> ignoreList2D;
@@ -51,12 +66,14 @@ namespace nv
         //[Header("(For 3D) Only get the first hit?")]
         bool useOneHit3DOptimization = false;
 
+        [SerializeField,HideInInspector]
         BoxCollider2D _box2d;
+        [SerializeField,HideInInspector]
         BoxCollider _box;
 
         public float boxColliderExtraFactor = 0.01f;
 
-        TimedRoutine raycastChecker;
+        //TimedRoutine raycastChecker;
 
         void Reset()
         {
@@ -99,6 +116,9 @@ namespace nv
             {
                 if(hits[i].transform.GetComponent<Raycaster>() == null)
                 {
+                    if( ignoreList2D.Contains( hits[ i ].collider ) )
+                        continue;
+
                     if(debug)
                         Debug.Log("Raycaster " + gameObject.name + " hit " + hits[i].transform.gameObject.name);
                     _hits.Add(hits[i].transform);
@@ -146,16 +166,16 @@ namespace nv
 
         void DoRaycast()
         {
-            if(debug)
-                Debug.Log("_frame_cached: " + _frame_cached);
+            //if(debug)
+            //    Debug.Log("_frame_cached: " + _frame_cached);
 
             if(_frame_cached == true)
                 return;
 
-            if(debug)
-                Debug.Log("_box_cached: " + _box_cached);
+            //if(debug)
+            //    Debug.Log("_box_cached: " + _box_cached);
 
-            if(useBoxColliderCache && _box_cached)
+            if(useBoxColliderCache && !raycastDirty)
                 return;
 
             _hits.Clear();
@@ -169,6 +189,11 @@ namespace nv
                 DoRaycast3D();
             }
 
+            if( _hits.Count > 0 )
+            {
+                raycastDirty = false;
+            }
+
             if(debug)
             {
                 if(_hits.Count > 0)
@@ -179,38 +204,54 @@ namespace nv
 
             _frame_cached = true;
 
-            if(useBoxColliderCache && _box_cached == false)
-                _box_cached = true;
+            //if(useBoxColliderCache && _box_cached == false)
+            //    _box_cached = true;
         }
 
-        void CreateBoxColliderForOptimization()
+        void SyncBoxColliderForOptimization()
         {
-            if(useBoxColliderCache == false)
-                return;
-
-            if(is2DRaycast)
+            if( !useBoxColliderCache )
             {
-                _box2d = gameObject.AddComponent<BoxCollider2D>();
-
-                _box2d.size = new Vector2(0.05f, (distance + boxColliderExtraFactor));
-                _box2d.offset = new Vector2(0.0f, (distance + boxColliderExtraFactor) * 0.5f);
-                _box2d.isTrigger = true;
+                if( _box2d != null )
+                {
+                    Destroy( _box2d );
+                    _box2d = null;
+                }
+                else if( _box != null )
+                {
+                    Destroy( _box );
+                    _box = null;
+                }
             }
             else
             {
-                _box = gameObject.AddComponent<BoxCollider>();
+                if( is2DRaycast )
+                {
+                    if( _box2d == null )
+                        _box2d = gameObject.AddComponent<BoxCollider2D>();
 
-                _box.size = new Vector3(0.05f, 0.05f, (distance + boxColliderExtraFactor));
-                _box.center = new Vector3(0.0f, 0.0f, (distance + boxColliderExtraFactor) * 0.5f);
-                _box.isTrigger = true;
+                    _box2d.size = new Vector2( 0.05f, ( distance + boxColliderExtraFactor ) );
+                    _box2d.offset = new Vector2( 0.0f, ( distance + boxColliderExtraFactor ) * 0.5f );
+                    _box2d.isTrigger = true;
+                }
+                else
+                {
+                    if( _box == null )
+                        _box = gameObject.AddComponent<BoxCollider>();
+
+                    _box.size = new Vector3( 0.05f, 0.05f, ( distance + boxColliderExtraFactor ) );
+                    _box.center = new Vector3( 0.0f, 0.0f, ( distance + boxColliderExtraFactor ) * 0.5f );
+                    _box.isTrigger = true;
+                }
             }
+
         }
 
         void Awake()
         {
-            CreateBoxColliderForOptimization();
+            SyncBoxColliderForOptimization();
 
-            raycastChecker = new TimedRoutine(.1f, () => { DoRaycast(); });
+            //raycastChecker = new TimedRoutine(.1f, () => { DoRaycast(); });
 
             if(updateOnAwake)
                 DoRaycast();
@@ -219,6 +260,17 @@ namespace nv
         void Update()
         {
             _frame_cached = false;
+
+            if( !useBoxColliderCache )
+            {
+                if( checkEachFrame )
+                    DoRaycast();
+            }
+            else
+            {
+                if( raycastDirty )
+                    DoRaycast();
+            }
 
             if(debug)
                 Debug.DrawLine(DebugStartPoint, DebugEndPoint, debugColor);
@@ -286,21 +338,26 @@ namespace nv
 
         void OnCollisionEnter(Collision other)
         {
+            raycastDirty = useBoxColliderCache && true;
             UpdateRaycaster(other.collider);
         }
 
         void OnCollisionEnter2D(Collision2D other)
         {
+            raycastDirty = useBoxColliderCache && true;
             UpdateRaycaster(other.collider);
         }
 
         void OnTriggerEnter(Collider other)
         {
+            raycastDirty = useBoxColliderCache && true;
             UpdateRaycaster(other);
         }
 
         void OnTriggerEnter2D(Collider2D other)
         {
+            raycastDirty = useBoxColliderCache && true;
+
             if(!ignoreList2D.Contains(other))
             {
                 if(use2DTriggersOnly)
@@ -313,11 +370,13 @@ namespace nv
 
         void OnTriggerExit(Collider other)
         {
+            raycastDirty = useBoxColliderCache && true;
             UpdateRaycaster(other);
         }
 
         void OnTriggerExit2D(Collider2D other)
         {
+            raycastDirty = useBoxColliderCache && true;
             if(!ignoreList2D.Contains(other))
             {
                 if(use2DTriggersOnly)
@@ -333,11 +392,10 @@ namespace nv
             if(ignoreList.Contains(other))
                 return;
 
-            if(!is2DRaycast && useBoxColliderCache)
-                _box_cached = false;
+            //if(!is2DRaycast && useBoxColliderCache)
+            //    _box_cached = false;
 
-            if(debugCheckAlways && !raycastChecker.IsRunning)
-                StartCoroutine(raycastChecker.Start());
+            DoRaycast();
         }
 
         void UpdateRaycaster(Collider2D other)
@@ -345,11 +403,10 @@ namespace nv
             if(ignoreList2D.Contains(other))
                 return;
 
-            if(is2DRaycast && useBoxColliderCache)
-                _box_cached = false;
+            //if(is2DRaycast && useBoxColliderCache)
+            //    _box_cached = false;
 
-            if(debugCheckAlways && !raycastChecker.IsRunning)
-                StartCoroutine(raycastChecker.Start());
+            DoRaycast();
         }
     }
 }

@@ -1,9 +1,12 @@
-﻿using UnityEngine;
+﻿#define GDK_GAME
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Audio;
 
+
+//TODO: separate the audio mixer code from this class
 namespace nv
 {
     public class AudioMixerManager : MonoBehaviour
@@ -24,18 +27,19 @@ namespace nv
         [Header("Required")]
         [SerializeField]
         AudioMixer audioMixer;
-
-        [Header("Required")]
+        
         [Tooltip("The mixer must have the volume exposed with this parameter name")]
         [SerializeField]
         string VolumeParameterName = "MasterVolume";
 
         [Header("Settings")]
         [SerializeField]
+        [Tooltip("Determines the maximum game volume used on the slider in the game. (ie. A game volume of 1 will really equal this value).")]
         [Range(0.0f, 1.0f)]
         float maxVolume = 0.0f;
 
         [SerializeField]
+        [Tooltip("Determines the minimum game volume used on the slider in the game. (ie. A game volume of 0 will really equal this value).")]
         [Range(0.0f, 1.0f)]
         float minVolume = 1.0f;
 
@@ -54,36 +58,42 @@ namespace nv
 
         //used to prevent recursive volume updates when updating the ui controller
         bool lockOnValueChange;
-        
-        public float Volume
+
+        public virtual float MaxVolume
         {
             get
             {
-                float gameVolume = maxVolume + MixerVolume * (minVolume - maxVolume);
-                return gameVolume;
+                return maxVolume;
+            }
+        }
+
+        public virtual float MinVolume
+        {
+            get
+            {
+                return minVolume;
+            }
+        }
+
+        public virtual float Volume
+        {
+            get
+            {
+                //return ( (AudioListener.volume / 1f) - MinVolume) / (MaxVolume - MinVolume);
+                return ( ( this[ VolumeParameterName ] / 1f ) - MinVolume ) / ( MaxVolume - MinVolume );
             }
             set
             {
                 lockOnValueChange = true;
-                MixerVolume = Mathf.Clamp01(value);
-                UpdateUIController(value);
+                float clampedValue = Mathf.Clamp01(value);
+                //AudioListener.volume = ((MinVolume + clampedValue * (MaxVolume - MinVolume)));
+                this[ VolumeParameterName ] = 1f * ( ( MinVolume + clampedValue * ( MaxVolume - MinVolume ) ) );
+                UpdateUIController(clampedValue);
                 lockOnValueChange = false;
             }
         }
 
-        public float MixerVolume
-        {
-            get
-            {
-                return this[VolumeParameterName];
-            }
-            set
-            {
-                this[VolumeParameterName] = value;
-            }
-        }
-
-        public float this[string paramName]
+        public virtual float this[string paramName]
         {
             get
             {
@@ -97,29 +107,42 @@ namespace nv
             }
         }
 
-        void Start()
+        IEnumerator Start()
         {
             Volume = defaultVolume;
             UnityEngine.SceneManagement.SceneManager.sceneLoaded -= AddMixerToAudioSourcesOnSceneLoad;
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += AddMixerToAudioSourcesOnSceneLoad;
+
+            if(!GameObjectExtensions.FindObjectsOfType<AudioListener>().Any())
+                gameObject.AddComponent<AudioListener>();
+
+            yield break;
         }
 
-        void OnEnable()
+
+        protected virtual void OnValidate()
+        {
+            if(uiController != null)
+            {
+                uiController.onValueChanged.RemovePersistentListener<float>(this, OnValueChange);
+                UpdateUIController(Volume);
+                uiController.onValueChanged.AddPersistentListener<float>(this, OnValueChange);
+            }
+        }
+
+        protected virtual void OnEnable()
         {
             comms.EnableNode(this);
 
-            if(!GameObject.FindObjectsOfType<AudioListener>().Any())
-                gameObject.AddComponent<AudioListener>();
-
             if(uiController != null)
             {
-                UpdateUIController(Volume);
                 uiController.onValueChanged.RemoveListener(OnValueChange);
+                UpdateUIController(Volume);
                 uiController.onValueChanged.AddListener(OnValueChange);
             }
         }
 
-        void OnDisable()
+        protected virtual void OnDisable()
         {
             comms.DisableNode();
             
@@ -128,8 +151,17 @@ namespace nv
                 uiController.onValueChanged.RemoveListener(OnValueChange);
             }
         }
+        
+        [ContextMenu("Set AudioSources with null mixer to this")]
+        public virtual void ApplyAudioMixerToAudioSourcesWithNullMixer()
+        {
+            GameObjectExtensions.FindObjectsOfType<AudioSource>().ForEach(x =>
+            {
+                x.outputAudioMixerGroup = audioMixer.outputAudioMixerGroup;
+            });
+        }
 
-        void AddMixerToAudioSourcesOnSceneLoad(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+        protected virtual void AddMixerToAudioSourcesOnSceneLoad(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
         {
             if(!autoAddMixerOnSceneLoad)
                 return;
@@ -145,23 +177,23 @@ namespace nv
         }
 
         [CommunicationCallback]
-        public void SetParameter(object publisher, MixerParameter param)
+        public virtual void SetParameter(MixerParameter param, object publisher)
         {
             if(string.IsNullOrEmpty(param.mixerName))
                 this[param.paramName] = param.value;
             else if(param.mixerName == audioMixer.name)
                 this[param.paramName] = param.value;
         }
-        
-        void UpdateUIController(float newVolume)
+
+        protected virtual void UpdateUIController(float newVolume)
         {
             if(uiController == null)
                 return;
 
             uiController.normalizedValue = newVolume;
         }
-        
-        public void OnValueChange(float newValue)
+
+        protected virtual void OnValueChange(float newValue)
         {
             if(lockOnValueChange)
                 return;
@@ -169,7 +201,23 @@ namespace nv
             if(uiController == null)
                 return;
 
-            Volume = uiController.normalizedValue;
+            Volume = newValue;
+        }
+
+        public static void StopAllPlayingSounds()
+        {
+            AudioListener.pause = false;
+            GameObjectExtensions.FindObjectsOfType<AudioSource>().ForEach(x => x.Stop());
+        }
+
+        public static void PauseAllPlayingSounds()
+        {
+            AudioListener.pause = true;
+        }
+
+        public static void ResumeAllPlayingSounds()
+        {
+            AudioListener.pause = false;
         }
     }
 }

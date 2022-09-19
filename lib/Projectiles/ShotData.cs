@@ -7,7 +7,7 @@ using System;
 namespace nv
 {
     [System.Serializable]
-    public class ShotData : ListData
+    public class ShotData : IComparable<ShotData>
     {
         public string shotData;
 
@@ -21,6 +21,11 @@ namespace nv
         public bool IsAlive
         {
             get; set;
+        }
+
+        public int CompareTo(ShotData other)
+        {
+            return string.Compare(shotData, other.shotData);
         }
 
         protected virtual bool Equals(ShotData other)

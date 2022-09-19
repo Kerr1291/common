@@ -32,7 +32,7 @@ namespace nv
 
         public override bool ProcessHit(GameObject hitObject)
         {
-            if(_shotData.data.ignoreList.Contains(hitObject))
+            if(_shotData.Data.ignoreList.Contains(hitObject))
                 return true;
 
             Rigidbody2D otherRBody = hitObject.GetComponent<Rigidbody2D>();
@@ -65,9 +65,9 @@ namespace nv
             _shotData = shot;
             _transform = transform;
             _rbody = GetComponent<Rigidbody2D>();
-            _velocity = shotVelocity * _shotData.data.shotDirection * Time.fixedDeltaTime;
+            _velocity = shotVelocity * _shotData.Data.shotDirection * Time.fixedDeltaTime;
 
-            _transform.position = shot.data.spawnPoint;
+            _transform.position = shot.Data.spawnPoint;
         }
 
         public override void DoUpdate(ShotView shot)

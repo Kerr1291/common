@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>Lazy Component Property</Title>
+      <Author>kloomis</Author>
+      <Description>Creates a hidden field and a property to access it and fill it using GetComponent(). The field will not be initialized until the property is accessed.</Description>
+      <Shortcut>lazy</Shortcut>
+    </Header>
+    <Snippet>
+      <!--<Imports>
+        <Import>
+          <Namespace>UnityEngine.UI</Namespace>
+        </Import>
+      </Imports>-->
+      <Declarations>
+        <Object>
+          <ID>ComponentType</ID>
+          <Type>UnityEngine.Component</Type>
+          <ToolTip>Replace with a component object.</ToolTip>
+          <Default>Transform</Default>
+        </Object>
+        <Object>
+          <ID>FieldName</ID>
+          <Type>UnityEngine.Component</Type>
+          <ToolTip>Replace with the component's field name.</ToolTip>
+          <Default>serializedComponent</Default>
+        </Object>
+        <Object>
+          <ID>PropertyName</ID>
+          <Type>UnityEngine.Component</Type>
+          <ToolTip>Replace with the component's property name.</ToolTip>
+          <Default>SerializedComponent</Default>
+        </Object>        
+      <!--<Literal>
+          <ID>ComponentType</ID>
+          <ToolTip></ToolTip>
+          <Default>""</Default>
+        </Literal>-->      
+      </Declarations>
+      <Code Language="CSharp">
+        <![CDATA[        
+            [SerializeField, HideInInspector]
+            protected $ComponentType$ $FieldName$;
+            public $ComponentType$ $PropertyName$
+            {
+                get
+                {
+                    if($FieldName$ == null)
+                        $FieldName$ = GetComponent<$ComponentType$>();
+                    return $FieldName$;
+                }
+            }
+        ]]>
+      </Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

@@ -132,7 +132,7 @@ namespace nv
         public override IEnumerator Start(bool tryResume, params object[] args)
         {
             if(args.Length <= 0)
-                return null;
+                return base.Start(tryResume, args);
 
             Length = (float)args[0];
             List<object> argsList = new List<object>(args);

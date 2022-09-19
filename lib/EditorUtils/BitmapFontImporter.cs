@@ -10,7 +10,7 @@ namespace nv.editor
 {
     public static class BitmapFontImporter
     {
-        [MenuItem(Consts.MENU_ROOT + "/Assets/Generate Bitmap Font")]
+        [MenuItem(Consts.Menu.ROOT + "/Assets/Generate Bitmap Font")]
         public static void GenerateFont()
         {
             TextAsset selected = (TextAsset)Selection.activeObject;

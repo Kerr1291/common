@@ -21,8 +21,8 @@ namespace nv.editor
                 r = ((Range[])obj)[index];
             }
 
-            float valueA = (float)r.GetType().GetField("valueA", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(r);
-            float valueB = (float)r.GetType().GetField("valueB", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(r);
+            float from = (float)r.GetType().GetField("from", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(r);
+            float to = (float)r.GetType().GetField("to", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(r);
 
             float min = (float)r.GetType().GetProperty("Min", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).GetValue(r, null);
             float max = (float)r.GetType().GetProperty("Max", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).GetValue(r, null);
@@ -31,10 +31,10 @@ namespace nv.editor
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(label.text, GUILayout.MaxWidth(label.text.Length * 8));
             EditorGUILayout.LabelField(minMaxLabelString, GUILayout.MaxWidth(20 + minMaxLabelString.Length * 7));
-            EditorGUILayout.LabelField("ValueA", GUILayout.MaxWidth(58));
-            r.ValueA = EditorGUILayout.DelayedFloatField(valueA, GUILayout.MaxWidth(58));
-            EditorGUILayout.LabelField("ValueB", GUILayout.MaxWidth(58));
-            r.ValueB = EditorGUILayout.DelayedFloatField(valueB, GUILayout.MaxWidth(58));
+            EditorGUILayout.LabelField("Range", GUILayout.MaxWidth(58));
+            r.From = EditorGUILayout.DelayedFloatField(from, GUILayout.MaxWidth(58));
+            EditorGUILayout.LabelField(",", GUILayout.MaxWidth(12));
+            r.To = EditorGUILayout.DelayedFloatField(to, GUILayout.MaxWidth(58));
             EditorGUILayout.EndHorizontal();
         }
     }
@@ -47,32 +47,32 @@ namespace nv
     public class Range : IComparable<Range>
     {
         [SerializeField]
-        float valueA;
+        float from;
 
         [SerializeField]
-        float valueB;
+        float to;
         
-        public float ValueA
+        public float From
         {
             get
             {
-                return valueA;
+                return from;
             }
             set
             {
-                valueA = value;
+                from = value;
             }
         }
 
-        public float ValueB
+        public float To
         {
             get
             {
-                return valueB;
+                return to;
             }
             set
             {
-                valueB = value;
+                to = value;
             }
         }
 
@@ -83,7 +83,7 @@ namespace nv
         {
             get
             {
-                return Mathf.Min(ValueA, ValueB);
+                return Mathf.Min(From, To);
             }
         }
 
@@ -94,7 +94,7 @@ namespace nv
         {
             get
             {
-                return Mathf.Max(ValueA, ValueB);
+                return Mathf.Max(From, To);
             }
         }
 
@@ -106,42 +106,55 @@ namespace nv
             }
         }
 
+        public float Distance
+        {
+            get
+            {
+                return (to - from);
+            }
+        }
+
         public Range()
         {
-            ValueA = 0f;
-            ValueB = 1f;
+            From = 0f;
+            To = 1f;
         }
 
         public Range(float min, float max)
         {
-            ValueA = min;
-            ValueB = max;
+            From = min;
+            To = max;
         }
-
+        
+        public Range(Vector2 minMax)
+        {
+            From = minMax.x;
+            To = minMax.y;
+        }
 
         public Range(float size)
         {
-            ValueA = 0f;
-            ValueB = size;
+            From = 0f;
+            To = size;
         }
 
         public Range(AnimationCurve data, bool getDataFromXAxis = false)
         {
-            ValueA = 0f;
-            ValueB = 1f;
+            From = 0f;
+            To = 1f;
 
             if(data.length < 1)
                 return;
 
             if(getDataFromXAxis)
             {
-                ValueA = data.keys.Min(x => x.time);
-                ValueB = data.keys.Max(x => x.time);
+                From = data.keys.Min(x => x.time);
+                To = data.keys.Max(x => x.time);
             }
             else
             {
-                ValueA = data.keys.Min(x => x.value);
-                ValueB = data.keys.Max(x => x.value);
+                From = data.keys.Min(x => x.value);
+                To = data.keys.Max(x => x.value);
             }
         }
 
@@ -151,15 +164,15 @@ namespace nv
             {
                 i = Mathf.Clamp(i, 0, 1);
                 if(i == 0)
-                    return ValueA;
-                return ValueB;
+                    return From;
+                return To;
             }
             set
             {
                 i = Mathf.Clamp(i, 0, 1);
                 if(i == 0)
-                    ValueA = value;
-                ValueB = value;
+                    From = value;
+                To = value;
             }
         }
 
@@ -305,7 +318,23 @@ namespace nv
         }
 
         /// <summary>
-        /// Convert the range into a set of discrete steps. Example, [0,1] with 10 steps will give a list of [.1,.2,.3, .., 1]
+        /// Convert the range into a set of evenly distributed discrete steps of size 1.
+        /// </summary>
+        /// <param name="steps"></param>
+        /// <returns></returns>
+        public List<int> ToSteps()
+        {
+            List<int> sets = new List<int>();
+            sets.Add((int)Min);
+            for(int i = 1; i <= Size; ++i)
+            {
+                sets.Add((int)Min + i);
+            }
+            return sets;
+        }
+
+        /// <summary>
+        /// Convert the range into a set of discrete steps. Example, [0,1] with 10 steps will give a list of [0,.1,.2,.3, .., 1]
         /// </summary>
         /// <param name="steps"></param>
         /// <returns></returns>
@@ -313,6 +342,7 @@ namespace nv
         {
             float stepSize = Size / steps;
             List<float> sets = new List<float>();
+            sets.Add(Min);
             for(int i = 1; i <= steps; ++i)
             {
                 sets.Add(Min + stepSize * i);

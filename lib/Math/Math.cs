@@ -188,9 +188,33 @@ namespace nv
             }
         }
 
-        public static IEnumerator<Vector2Int> GetAreaEnumerator(Vector2Int size)
+        public static IEnumerator<Vector2Int> GetAreaEnumerator( int w, int h, bool transpose )
         {
-            IEnumerator<Vector2Int> iterator = GetAreaEnumerator(size.x, size.y);
+            if( transpose )
+            {
+                var yIter = GetRangeEnumerator( 0, h );
+
+                while( yIter.MoveNext() )
+                {
+                    var xIter = GetRangeEnumerator( 0, w );
+
+                    while( xIter.MoveNext() )
+                    {
+                        yield return new Vector2Int( yIter.Current, xIter.Current );
+                    }
+                }
+            }
+            else
+            {
+                IEnumerator<Vector2Int> iterator = GetAreaEnumerator( w, h );
+                while( iterator.MoveNext() )
+                    yield return iterator.Current;
+            }
+        }
+
+        public static IEnumerator<Vector2Int> GetAreaEnumerator(Vector2Int size, bool transpose = false)
+        {
+            IEnumerator<Vector2Int> iterator = GetAreaEnumerator(size.x, size.y, transpose );
             while(iterator.MoveNext())
                 yield return iterator.Current;
         }
@@ -210,11 +234,52 @@ namespace nv
             }
         }
 
-        public static IEnumerator<Vector2Int> GetAreaEnumerator(Vector2Int from, Vector2Int to)
+        public static IEnumerator<Vector2Int> GetAreaEnumerator( int fromX, int fromY, int toX, int toY, bool transpose )
         {
-            IEnumerator<Vector2Int> iterator = GetAreaEnumerator(from.x, from.y, to.x, to.y);
+            if( transpose )
+            {
+                var yIter = GetRangeEnumerator( fromY, toY );
+
+                while( yIter.MoveNext() )
+                {
+                    var xIter = GetRangeEnumerator( fromX, toX );
+
+                    while( xIter.MoveNext() )
+                    {
+                        yield return new Vector2Int( yIter.Current, xIter.Current );
+                    }
+                }
+            }
+            else
+            {
+                IEnumerator<Vector2Int> iterator = GetAreaEnumerator( fromX, fromY, toX, toY );
+                while( iterator.MoveNext() )
+                    yield return iterator.Current;
+            }
+        }
+
+        public static IEnumerator<Vector2Int> GetAreaEnumerator(Vector2Int from, Vector2Int to, bool transpose = false)
+        {
+            IEnumerator<Vector2Int> iterator = GetAreaEnumerator(from.x, from.y, to.x, to.y, transpose);
             while(iterator.MoveNext())
                 yield return iterator.Current;
+        }
+
+        /// <summary>
+        /// Mathematical modulus, different from the % operation that returns the remainder.
+        /// This performs a "wrap around" of the given value assuming the range [0, mod). This does work with negative values.
+        /// Define mod 0 to return the value unmodified if it's greater than zero. Else return 0.
+        /// </summary>
+        public static int Modulus(int value, int mod)
+        {
+            if(mod == 0)
+                return value >= 0 ? value : mod;
+            if(value > 0)
+                return (value % mod);
+            else if(value < 0)
+                return (value % mod + mod) % mod;
+            else
+                return value;
         }
     }
 }

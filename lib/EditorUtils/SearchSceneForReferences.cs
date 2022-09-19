@@ -22,50 +22,57 @@ namespace nv.editor
                 var rootObjects = EditorSceneManager.GetSceneAt(s).GetRootGameObjects();
                 foreach(var rootGo in rootObjects)
                 {
-                    var objectsToSearch = rootGo.GetComponentsInChildren<Transform>().Select(x => x.gameObject).ToList();
-
-                    for(int j = 0; j < objectsToSearch.Count; j++)
-                    {
-                        var searchThisGameObject = objectsToSearch[j];
-
-                        if(PrefabUtility.GetPrefabType(searchThisGameObject) == PrefabType.PrefabInstance)
-                        {
-                            if(PrefabUtility.GetCorrespondingObjectFromSource(searchThisGameObject) == to)
-                            {
-                                Debug.Log(string.Format("referenced by {0}, {1}", searchThisGameObject.name, searchThisGameObject.GetType()), searchThisGameObject);
-                                objectsThatReferenceComponent.Add(searchThisGameObject);
-                            }
-                        }
-
-                        var components = searchThisGameObject.GetComponents<Component>();
-                        for(int i = 0; i < components.Length; i++)
-                        {
-                            var c = components[i];
-                            if(c == null)
-                                continue;
-
-                            var serializedObjectDummy = new SerializedObject(c);
-                            var serializedPropertyIterator = serializedObjectDummy.GetIterator();
-
-                            while(serializedPropertyIterator.NextVisible(true))
-                            {
-                                if(serializedPropertyIterator.propertyType == SerializedPropertyType.ObjectReference)
-                                {
-                                    if(serializedPropertyIterator.objectReferenceValue == to)
-                                    {
-                                        Debug.Log(string.Format("referenced by {0}, {1}", c.name, c.GetType()), c);
-                                        objectsThatReferenceComponent.Add(c.gameObject);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    var objectsToSearch = rootGo.GetComponentsInChildren<Transform>(true).Select(x => x.gameObject).ToList();
+                    SearchObjects(to, objectsThatReferenceComponent, objectsToSearch);
                 }
 
                 if(objectsThatReferenceComponent.Count > 0)
                     Selection.objects = objectsThatReferenceComponent.ToArray();
                 else
                     Debug.Log("no references in scene");
+            }
+        }
+
+        private static void SearchObjects(UnityEngine.Object to, List<UnityEngine.Object> objectsThatReferenceComponent, List<GameObject> objectsToSearch)
+        {
+            Component toComponent = to as Component;
+            GameObject toGameObject = toComponent != null ? toComponent.gameObject : null;
+
+            for(int j = 0; j < objectsToSearch.Count; j++)
+            {
+                var searchThisGameObject = objectsToSearch[j];
+
+                if(PrefabUtility.GetPrefabType(searchThisGameObject) == PrefabType.PrefabInstance)
+                {
+                    if(PrefabUtility.GetPrefabObject(searchThisGameObject) == to)
+                    {
+                        Debug.Log(string.Format("referenced by {0}, {1}", searchThisGameObject.name, searchThisGameObject.GetType()), searchThisGameObject);
+                        objectsThatReferenceComponent.Add(searchThisGameObject);
+                    }
+                }
+
+                var components = searchThisGameObject.GetComponents<Component>();
+                for(int i = 0; i < components.Length; i++)
+                {
+                    var c = components[i];
+                    if(c == null)
+                        continue;
+
+                    var serializedObjectDummy = new SerializedObject(c);
+                    var serializedPropertyIterator = serializedObjectDummy.GetIterator();
+
+                    while(serializedPropertyIterator.NextVisible(true))
+                    {
+                        if(serializedPropertyIterator.propertyType == SerializedPropertyType.ObjectReference)
+                        {
+                            if(serializedPropertyIterator.objectReferenceValue == to || serializedPropertyIterator.objectReferenceValue == toGameObject)
+                            {
+                                Debug.Log(string.Format("referenced by {0}, {1}", c.name, c.GetType()), c);
+                                objectsThatReferenceComponent.Add(c.gameObject);
+                            }
+                        }
+                    }
+                }
             }
         }
 

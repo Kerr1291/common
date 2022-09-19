@@ -69,9 +69,9 @@ namespace nv
             return outData;
         }
 
-        public static IEnumerator<Vector2Int> GetEnumerator2D<T>(this ArrayGrid<T> grid)
+        public static IEnumerator<Vector2Int> GetEnumerator2D<T>(this ArrayGrid<T> grid, bool transpose = false)
         {
-            IEnumerator<Vector2Int> iterator = Mathnv.GetAreaEnumerator(grid.w, grid.h);
+            IEnumerator<Vector2Int> iterator = Mathnv.GetAreaEnumerator(grid.w, grid.h, transpose);
             while(iterator.MoveNext())
                 yield return iterator.Current;
         }

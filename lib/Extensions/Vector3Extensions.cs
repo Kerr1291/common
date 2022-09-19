@@ -23,6 +23,18 @@ namespace nv
 
     public static class Vector3Extensions
     {
+        public static Vector3 Min(this IEnumerable<Vector3> set)
+        {
+            Vector3 min = new Vector3(set.Select(y => y.x).Min(), set.Select(y => y.y).Min(), set.Select(y => y.z).Min());
+            return min;
+        }
+
+        public static Vector3 Max(this IEnumerable<Vector3> set)
+        {
+            Vector3 max = new Vector3(set.Select(y => y.x).Max(), set.Select(y => y.y).Max(), set.Select(y => y.z).Max());
+            return max;
+        }
+
         public static Vector3 Clamp( this Vector3 value, Vector3 min, Vector3 max )
         {
             value.x = Mathf.Clamp( value.x, min.x, max.x );

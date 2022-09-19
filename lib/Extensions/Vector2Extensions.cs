@@ -8,6 +8,15 @@ namespace nv
 {
     public static class Vector2Extensions
     {
+        public static Vector3 ToVector3( this Vector2 value, float z = 0f )
+        {
+            Vector3 t = Vector3.zero;
+            t.x = value.x;
+            t.y = value.y;
+            t.z = z;
+            return t;
+        }
+
         public static Vector2 Clamp( this Vector2 value, Vector2 min, Vector2 max )
         {
             value.x = Mathf.Clamp( value.x, min.x, max.x );

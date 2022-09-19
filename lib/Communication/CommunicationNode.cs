@@ -49,44 +49,65 @@ namespace nv
 
         protected class QueuedPublish
         {
-            public QueuedPublish(object publishedData, object publisher, Tags tags, List<string> publishToNetworks)
+            public QueuedPublish(object publishedData, object publisher, Tags tags, List<string> publishToNetworks, string sourceScene)
             {
                 this.publishedData = publishedData;
                 this.publisher = publisher;
                 this.tags = tags;
                 this.publishToNetworks = publishToNetworks;
+                wasGlobal = publisher == null;
+                this.sourceScene = sourceScene;
             }
 
             public object publishedData;
             public object publisher;
             public Tags tags;
             public List<string> publishToNetworks;
+            public bool wasGlobal;
+            public string sourceScene;
         }
 
         protected static Queue<QueuedPublish> onSceneLoadedQueue = new Queue<QueuedPublish>();
+        protected static List<string> loadedScenes = new List<string>();
 
         protected static void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
         {
+            loadedScenes.Add(scene.name);
             queuePublishes = false;
-            foreach(QueuedPublish p in onSceneLoadedQueue)
+
+            var queuedPublishes = onSceneLoadedQueue.ToList();
+            foreach(QueuedPublish p in queuedPublishes)
             {
+                if(!p.wasGlobal && p.publisher == null)
+                {
+                    //the object that queued this publish was destroyed (likely in scene unload); don't invoke this publish action
+                    continue;
+                }
+                if(!loadedScenes.Contains(p.sourceScene))
+                {
+                    //the object was queued from a scene that was unloaded
+                    continue;
+                }
                 publish(p.publishedData, p.publisher, p.tags, p.publishToNetworks);
             }
             onSceneLoadedQueue.Clear();
+            CleanNetwork();
         }
 
         protected static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene current)
         {
+            loadedScenes.Remove(current.name);
             //queue events until the active scene has finished changing
             if(current == UnityEngine.SceneManagement.SceneManager.GetActiveScene())
                 queuePublishes = true;
             onSceneLoadedQueue.Clear();
+            CleanNetwork();
         }
 #endif
         /// <summary>
         /// Optional list of networks to join when this node is enabled.
         /// </summary>
-        public List<string> networksToJoinOnEnable;
+        public List<string> networksToJoinOnEnable = new List<string>();
 
         /// <summary>
         /// Enable this to allow an object to publish events to itself.
@@ -177,6 +198,10 @@ namespace nv
             }
         }
 
+        public override string ToString()
+        {
+            return GetObjectTypeName(NodeOwner) + "::" + GetObjectName(NodeOwner) + "@" + string.Join(", ", Networks.ToArray());
+        }
 
         protected readonly Dictionary<Type,Dictionary<string, MethodInfo>> enabledHandlers = new Dictionary<Type, Dictionary<string, MethodInfo>>();
 
@@ -229,7 +254,12 @@ namespace nv
 #if UNITY_5_6_OR_NEWER
                 if(queuePublishes)
                 {
-                    onSceneLoadedQueue.Enqueue(new QueuedPublish(dataToPublish, publisher, tags, totalNetworks));
+                    string publisherScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                    if(publisher is UnityEngine.Component)
+                        publisherScene = (publisher as UnityEngine.Component).gameObject.scene.name;
+                    if(publisher is UnityEngine.GameObject)
+                        publisherScene = (publisher as UnityEngine.GameObject).scene.name;
+                    onSceneLoadedQueue.Enqueue(new QueuedPublish(dataToPublish, publisher, tags, totalNetworks, publisherScene));
                 }
                 else
 #endif
@@ -239,10 +269,12 @@ namespace nv
             }
             catch(Exception e)
             {
+                string publisherName = GetObjectName(publisher);
 #if UNITY_5_3_OR_NEWER
-                DebugLogger.LogError("Unhandled exception caught when publishing an event: " + e.Message);
+                DebugLogger.LogError("Unhandled Exception caught when " + (queuePublishes ? "queuing" : "publishing") + " data of type " + GetObjectTypeName(dataToPublish) + " sent by " + publisherName + ": " + e.Message);
+                DebugLogger.LogError(e.StackTrace);
 #else
-                DebugLogger.WriteLine("Unhandled exception caught when publishing an event: " + e.Message);
+                DebugLogger.WriteLine( "Unhandled Exception caught when " + "publishing" +" data of type " + dataToPublish.GetType().Name + " sent by " + publisherName + ": " + e.Message + " at " + e.StackTrace );
 #endif
             }
         }
@@ -302,6 +334,8 @@ namespace nv
             if( nodeOwner == null )
             {
                 DisableNode();
+                if(debugPrintAllActivity)
+                    DebugLogger.LogError("Cannot add a node with a null node owner");
                 return;
             }
 
@@ -342,9 +376,20 @@ namespace nv
             //By default, use the type name to add the object to its own network
             if(totalNetworks.Count <= 0)
             {
-                totalNetworks.Add(nodeOwner.GetType().Name);
+                if(debugPrintAllActivity)
+                {
+                    DebugLogger.Log("Since no networks were specified, adding this node to a network with the object's type name " + GetObjectTypeName(nodeOwner));
+                }
+                totalNetworks.Add(GetObjectTypeName(nodeOwner));
             }
 
+            if(debugPrintAllActivity)
+            {
+                string addingToNetworks = "";
+                networksToJoin.Select(x => { addingToNetworks += x + ", "; return x; });
+                addingToNetworks = addingToNetworks.TrimEnd(',', ' ');
+                DebugLogger.Log("Adding ".Colorize(UnityEngine.Color.green) + GetObjectTypeName(nodeOwner).Colorize(UnityEngine.Color.green) + "::" + GetObjectName(nodeOwner).Colorize(UnityEngine.Color.yellow) + " these networks: " + addingToNetworks);
+            }
             CommunicationNode.AddNode(this, totalNetworks);
             RefreshCallbackBindings();
         }
@@ -389,7 +434,7 @@ namespace nv
         /// The standard way data is passed through the networks; Iterate over the intrusive link-list and invoke all matching handlers.
         /// </summary>
         protected static void DefaultPublish(object publishedData, object publisher, Tags tags, List<string> publishToNetworks = null)
-        {            
+        {
             string sentNetworks = null;
             string notFoundNetworks = null;
 
@@ -441,6 +486,8 @@ namespace nv
 
             if(!debugPublishWasHandled && debugNotifyUnhandledMessages)
             {
+                if(sentNetworks == null)
+                    sentNetworks = string.Empty;
                 sentNetworks = sentNetworks.TrimEnd(',', ' ');
 
                 if(!string.IsNullOrEmpty(notFoundNetworks))
@@ -449,8 +496,49 @@ namespace nv
                     notFoundNetworks = "These networks were not found: " + notFoundNetworks;
                 }
 
-                DebugLogger.Log("Publish: " + publishedData.GetType().Name + " sent by " + publisher.GetType() + "::" + GetObjectName(publisher)
+                DebugLogger.Log("Publish: " + GetObjectTypeName(publishedData) + " sent by " + GetObjectTypeName(publisher) + "::" + GetObjectName(publisher)
                     + " was not handled by any handlers in these networks: " + sentNetworks + "; " + (notFoundNetworks == null ? string.Empty : notFoundNetworks));
+            }
+        }
+
+        public static void CleanNetwork()
+        {
+            List<CommunicationNode> orphanList = null;
+            
+            //remove orphans
+            foreach(var network in root)
+            {
+                CommunicationNode current = network.Value;
+
+                //iterate over all nodes on the network
+                do
+                {
+                    //keep track of orphaned nodes (unity objects that have been deleted will register as null)
+                    if(current.NodeOwner == null)
+                    {
+                        if(orphanList == null)
+                            orphanList = new List<CommunicationNode>();                        
+
+                        orphanList.Add(current);
+                    }
+                    
+                    current = current.next[network.Key];
+
+                } while(current != root[network.Key]);
+            }
+
+            if(orphanList != null)
+            {
+                //remove/clean up orphaned nodes
+                for(int i = 0; i < orphanList.Count; ++i)
+                {
+                    if(debugPrintAllActivity)
+                    {
+                        DebugLogger.Log("Cleaning orphaned node " + orphanList[i]);
+                    }
+
+                    RemoveNode(orphanList[i]);
+                }
             }
         }
 
@@ -487,7 +575,8 @@ namespace nv
                 {
                     if(debugPrintAllActivity)
                     {
-                        DebugLogger.Log("Publish is Invoking handler for : " + publishedData.GetType().Name + " on " + GetObjectName(current.NodeOwner) + " sent by " + GetObjectName(publisher));
+                        if(current.HasMatchingCallback(publishedData, publisher, tags))
+                            DebugLogger.Log("Publish is Invoking handler for : " + GetObjectTypeName(publishedData).Colorize(UnityEngine.Color.green) + " on " + GetObjectName(current.NodeOwner).Colorize(UnityEngine.Color.yellow) + " sent by " + GetObjectName(publisher).Colorize(UnityEngine.Color.yellow));
                     }
                     bool result = current.InvokeMatchingCallback(publishedData, publisher, tags);
                     if(result)
@@ -526,13 +615,13 @@ namespace nv
         {
             foreach(var n in node.next)
             {
-                if(n.Value.next != null)
+                if(n.Value == null || n.Value.next != null)
                     return true;
             }
 
             foreach(var p in node.prev)
             {
-                if(p.Value.prev != null)
+                if(p.Value == null || p.Value.prev != null)
                     return true;
             }
 
@@ -547,9 +636,17 @@ namespace nv
             foreach(string n in networkCollection)
             {
                 if(root.ContainsKey(n))
-                    continue;
+                {
+                    if(root[n] != null)
+                        continue;
 
-                root.Add(n, node);
+                    root[n] = node;
+                }
+                else
+                {
+                    root.Add(n, node);
+                }
+
                 root[n].next[n] = root[n];
                 root[n].prev[n] = root[n];
             }
@@ -584,7 +681,7 @@ namespace nv
                 string addingToNetworks = "";
                 networks.Select(x => { addingToNetworks += x + ", "; return x; });
                 addingToNetworks = addingToNetworks.TrimEnd(',',' ');
-                DebugLogger.Log("Adding node with owner "+GetObjectName(node.NodeOwner)+ " to network(s): "+addingToNetworks);
+                DebugLogger.Log("Adding node with owner "+ GetObjectTypeName(node.NodeOwner).Colorize(UnityEngine.Color.green)+"::"+GetObjectName(node.NodeOwner).Colorize( UnityEngine.Color.yellow ) + " to network(s): "+addingToNetworks);
             }
 
             //if the node has non-null connections, clear them by removing it before we process the insertion
@@ -608,9 +705,13 @@ namespace nv
             if(debugPrintAllActivity)
             {
                 string removingNetworks = "";
-                node.Networks.ToList().Select(x => { removingNetworks += x + ", "; return x; });
+                if(node != null && node.Networks != null )
+                    node.Networks.ToList().Select(x => { removingNetworks += x + ", "; return x; });
                 removingNetworks = removingNetworks.TrimEnd(',', ' ');
-                DebugLogger.Log("Removing node with owner " + GetObjectName(node.NodeOwner) + " from network(s): " + removingNetworks);
+#if UNITY_EDITOR
+                if(!UnityEngine.Application.isPlaying)
+#endif
+                    DebugLogger.Log("Removing node with owner " + GetObjectTypeName(node.NodeOwner).Colorize( UnityEngine.Color.green ) + "::" + GetObjectName(node.NodeOwner).Colorize( UnityEngine.Color.yellow ) + " from network(s): " + removingNetworks);
             }
 
             foreach(string n in networks)
@@ -632,6 +733,55 @@ namespace nv
             }
         }
 
+        protected virtual bool HasMatchingCallback( object publishedData, object publisher, Tags tags )
+        {
+            bool result = false;
+
+            if( NodeOwner == null )
+                return result;
+
+            Type handlerKey = publishedData.GetType();
+            Dictionary<string, MethodInfo> matchingHandlers;
+
+            //Does a method handling this data type exist?
+            if( !enabledHandlers.TryGetValue( handlerKey, out matchingHandlers ) )
+                return result;
+
+            MethodInfo method = null;
+
+            //were any tags specified on publish?
+            if( tags.Count > 0 )
+            {
+                //if any, check each tag and take the first matching key
+                if( tags.matching == Tags.Matching.Any )
+                {
+                    foreach( var t in tags.tags )
+                    {
+                        if( matchingHandlers.ContainsKey( t ) )
+                        {
+                            method = matchingHandlers[ t ];
+                            break;
+                        }
+                    }
+                }
+                //if all, try to match all tags
+                else if( tags.matching == Tags.Matching.All )
+                {
+                    if( !matchingHandlers.TryGetValue( tags.ToString(), out method ) )
+                        return result;
+                }
+            }
+            else
+            {
+                //none specified? see if there's a default
+                if( !matchingHandlers.TryGetValue( string.Empty, out method ) )
+                    return result;
+            }
+
+            result = ( method != null );
+            return result;            
+        }
+
         /// <summary>
         /// Invoke the callback that matches the data type of the data passed to the publish method.
         /// </summary>
@@ -639,6 +789,9 @@ namespace nv
         protected virtual bool InvokeMatchingCallback( object publishedData, object publisher, Tags tags )
         {
             bool result = false;
+
+            if( NodeOwner == null )
+                return result;
 
             Type handlerKey = publishedData.GetType();
             Dictionary<string, MethodInfo> matchingHandlers;
@@ -690,12 +843,13 @@ namespace nv
                 if(method.GetParameters().Length == 2)
                 {
                     Type publisherType = (publisher == null ? null : publisher.GetType());
+                    Type publisherParameterType = method.GetParameters()[1].ParameterType;
 
                     //only warn if the reciever method is expecting a specific type for the publisher and it doesn't match
-                    if(method.GetParameters()[1].GetType() != typeof(object) && method.GetParameters()[1].GetType() != publisherType)
+                    if(publisherParameterType != typeof(object) && publisherParameterType != publisherType)
                     {
-                        string publisherTypeName = (publisher == null ? "null" : publisher.GetType().Name);
-                        DebugLogger.Log(method.Name + " parameter 2 has type " + publisherTypeName + " which does not match the method's type " + method.GetParameters()[1].GetType().Name);
+                        string publisherTypeName = GetObjectTypeName(publisher);
+                        DebugLogger.Log(method.Name + " parameter 2 has type " + publisherTypeName + " which does not match the method's type " + publisherParameterType.Name);
                     }
 
                     method.Invoke(NodeOwner, new object[] { publishedData, publisher });
@@ -740,6 +894,11 @@ namespace nv
         /// </summary>
         protected virtual void RefreshCallbackBindings()
         {
+            if( debugPrintAllActivity )
+            {
+                if( enabledHandlers.Count > 0 )
+                    DebugLogger.Log( "On " + GetObjectTypeName( NodeOwner ) + "::" + GetObjectName( NodeOwner ) + " Clearing all handlers");
+            }
             enabledHandlers.Clear();
             
             // Iterate over all methods on the owner object.
@@ -752,15 +911,17 @@ namespace nv
                     continue;
 
                 ParameterInfo[] parameters = mi.GetParameters();
-                Type handlerKey = parameters[0].ParameterType;
                 
                 //handlers must take 1 or 2 parameters
                 if( parameters.Length > 0 || parameters.Length < 3)
                 {
+                    Type handlerKey = parameters[0].ParameterType;
                     CommunicationCallback attribute = mi.GetCustomAttributes(true).OfType<CommunicationCallback>().FirstOrDefault();
 
-                    if(!enabledHandlers.ContainsKey(handlerKey))
-                        enabledHandlers.Add(handlerKey, new Dictionary<string, MethodInfo>());
+                    if( !enabledHandlers.ContainsKey( handlerKey ) )
+                    {
+                        enabledHandlers.Add( handlerKey, new Dictionary<string, MethodInfo>() );
+                    }
 
                     string[] tags = attribute.tags;
                     if(tags.Length > 0 && attribute.tags.matching == Tags.Matching.Any)
@@ -768,11 +929,21 @@ namespace nv
                         foreach(string s in tags)
                         {
                             enabledHandlers[handlerKey].Add(s, mi);
+                            
+                            if( debugPrintAllActivity )
+                            {
+                                DebugLogger.Log( "On "+ GetObjectTypeName(NodeOwner)+"::"+GetObjectName(NodeOwner)+" Adding handler for type "+ handlerKey.Name.Colorize(UnityEngine.Color.green) + " with tags " + attribute.tags );
+                            }
                         }
                     }
                     else if(tags.Length <= 0 || attribute.tags.matching == Tags.Matching.All)
                     {
                         enabledHandlers[handlerKey].Add(string.Empty, mi);
+
+                        if( debugPrintAllActivity )
+                        {
+                            DebugLogger.Log( "On " + GetObjectTypeName( NodeOwner ) + "::" + GetObjectName( NodeOwner ) + " Adding handler for type " + handlerKey.Name.Colorize( UnityEngine.Color.green ) );
+                        }
                     }
                     else
                     {
@@ -807,6 +978,13 @@ namespace nv
             if(string.IsNullOrEmpty(name))
                 name = thing.GetType().Name;
             return name;
+        }
+
+        protected static string GetObjectTypeName( object thing )
+        {
+            if( thing == null )
+                return "null";            
+            return thing.GetType().Name;
         }
 
         /// <summary>

@@ -4,8 +4,10 @@ using UnityEngine;
 
 namespace nv
 {
-    public class ShotView : ListDataView<ShotData>
+    public class ShotView : PoolableMonoBehaviour<ShotData>
     {
+        public ShotList objectPool;
+
         [Header("Max lifetime of shot")]
         public float maxLifetime;
         public TimedRoutine lifetime;
@@ -16,13 +18,12 @@ namespace nv
         [Header("Describes how the shot moves, dies, and other things")]
         public BaseShotBehavior shotBehavior;
 
-        //Called each time an object comes into view
-        public override void BindDataToView(ShotData data)
+        protected override void Setup(ShotData data)
         {
-            if(this.data != null)
+            if(this.Data != null)
             {
                 //Debug.Log( "OOPS this data is still alive " + this.data.shotData );
-                this.data.IsAlive = false;
+                this.Data.IsAlive = false;
                 lifetime.Reset();
                 NotifyLifetimeEnd();
             }
@@ -30,7 +31,7 @@ namespace nv
             //before this call this object (the view) does not have an instance assigned
             //so we bind our data to this view and then do any additional setup required
             //example: we could set the text used by a ui text object by reading some value from the data
-            base.BindDataToView(data);
+            base.Setup(data);
 
             //Debug.Log( "Activating shot "+data.shotData );
 
@@ -44,7 +45,7 @@ namespace nv
         {
             //do we collide with this?
             //if( collisionType == ( collisionType | (1 << other.gameObject.layer) ) )
-            if(collisionType.Contains(other.gameObject))
+            if(collisionType.Any(other.gameObject))
             {
                 NotifyCollision(other.gameObject);
             }
@@ -54,7 +55,7 @@ namespace nv
         {
             //do we collide with this?
             //if( collisionType == ( collisionType | (1 << other.gameObject.layer) ) )
-            if(collisionType.Contains(other.gameObject))
+            if(collisionType.Any(other.gameObject))
             {
                 NotifyCollision(other.gameObject);
             }
@@ -63,16 +64,16 @@ namespace nv
         public void NotifyCollision(GameObject hitObject)
         {
             //Debug.Log( "shot hit something " + data.shotData );
-            data.IsAlive = shotBehavior.ProcessHit(hitObject);
+            Data.IsAlive = shotBehavior.ProcessHit(hitObject);
         }
 
         public void NotifyLifetimeEnd()
         {
-            if(data == null)
+            if(Data == null)
                 return;
 
             //Debug.Log( "shot ran out of life " + data.shotData );
-            data.IsAlive = false;
+            Data.IsAlive = false;
             //shotBehavior.DeactivateShot();
         }
 

@@ -37,6 +37,7 @@ using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using nv.editor;
 
 namespace nv
 {
@@ -64,8 +65,9 @@ namespace nv
 		{
 			FORCE_INIT = true;
 
-			EditorApplication.delayCall = () => { EditorApplication.delayCall = () => { FORCE_INIT = false; }; };
-		}
+			//EditorApplication.delayCall = () => { EditorApplication.delayCall = () => { FORCE_INIT = false; }; };
+            EditorApplication.delayCall += () => { FORCE_INIT = false; };
+        }
 
 		private static GUIStyle styleHighlight;
 
@@ -321,7 +323,12 @@ namespace nv
 			if (isInitialized && FORCE_INIT == false)
 				return;
 
-			styleEditBox = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(5, 5, 5, 5) };
+            try
+            {
+                styleEditBox = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(5, 5, 5, 5) };
+            }
+            catch(Exception)
+            { }
 			FindTargetProperties();
 			FindContextMenu();
 		}
@@ -354,12 +361,44 @@ namespace nv
 			Type typeScriptable = typeof(ScriptableObject);
 
 			SerializedProperty iterProp = serializedObject.GetIterator();
-			// This iterator goes through all the child serialized properties, looking
-			// for properties that have the SortableArray attribute
-			if (iterProp.NextVisible(true))
-			{
-				do
+            // This iterator goes through all the child serialized properties, looking
+            // for properties that have the SortableArray attribute
+            bool isInChildProperty = false;
+            bool parentHasSpecialAttribute = false;
+            SerializedProperty parent = iterProp;
+
+
+            if (iterProp.NextVisible(true))
+            {
+                bool hasMore = false;
+                do
                 {
+                    if(iterProp.name.Equals("m_Script"))
+                    {
+                        hasMore = iterProp.NextVisible(true);
+                        continue;
+                    }
+
+                    isInChildProperty = !((iterProp == null || iterProp.GetParentProp() == null));
+
+                    if(!isInChildProperty && iterProp != null && iterProp.GetParentProp() == null)
+                    {
+                        parent = iterProp;
+                        parentHasSpecialAttribute = iterProp.HasAttribute<ReorderableAttribute>()
+                            || iterProp.HasAttribute<EditScriptableAttribute>()
+                            || iterProp.HasAttribute<EditScriptableListAttribute>();
+                    }
+
+                    if(isInChildProperty && !parentHasSpecialAttribute)
+                    {
+                        //UnityEngine.Debug.Log("iterProp.name " + iterProp.name);
+                        //UnityEngine.Debug.Log("parentHasSpecialAttribute " + parentHasSpecialAttribute);
+                        iterProp = parent;
+                        hasMore = iterProp.NextVisible(false);
+                        continue;
+                    }
+
+
                     if (iterProp.isArray && iterProp.propertyType != SerializedPropertyType.String)
 					{
 #if LIST_ALL_ARRAYS
@@ -367,9 +406,9 @@ namespace nv
 #else
                         bool canTurnToList = iterProp.HasAttribute<ReorderableAttribute>();
 #endif
-						if (canTurnToList)
-						{
-							hasSortableArrays = true;
+                        if (canTurnToList)
+                        {
+                            hasSortableArrays = true;
 							CreateListData(serializedObject.FindProperty(iterProp.propertyPath));
 						}
 					}
@@ -389,6 +428,10 @@ namespace nv
                     {
                         propIsArray = true;
                         propArrayEdit = iterProp.HasAttribute<EditScriptableAttribute>();
+                        
+                        //TODO: see if this fixes array properties from being incorrectly displayed
+                        //if(!propArrayEdit)
+                        //    propIsArray = false;
                     }
 
                     //TODO: if we're in a list/array of EditScriptables, then pass that info to the items inside the array/list
@@ -396,8 +439,11 @@ namespace nv
 					{
 						Type propType = iterProp.GetTypeReflection();
 
-                        if (propType == null && !(IsInsideArray && propArrayEdit))
-							continue;
+                        if(propType == null && !(IsInsideArray && propArrayEdit))
+                        {
+                            hasMore = iterProp.NextVisible(true);
+                            continue;
+                        }
 
                         bool isScriptable = false;
 
@@ -444,8 +490,9 @@ namespace nv
 								hasEditable = true;
 							}
 						}
-					}
-				} while (iterProp.NextVisible(true));
+                    }
+                    hasMore = iterProp.NextVisible(true);
+                } while (hasMore);
 			}
 
 			isInitialized = true;
@@ -523,9 +570,9 @@ namespace nv
 		}
 
 		private void HandleReorderableOptions(ReorderableAttribute arrayAttr, SerializedProperty property, SortableListData data)
-		{
-			// Custom element header
-			if (string.IsNullOrEmpty(arrayAttr.ElementHeader) == false)
+        {
+            // Custom element header
+            if (string.IsNullOrEmpty(arrayAttr.ElementHeader) == false)
 			{
 				data.ElementHeaderCallback = i => string.Format("{0} {1}", arrayAttr.ElementHeader, (arrayAttr.HeaderZeroIndex ? i : i + 1));
 			}
@@ -570,8 +617,8 @@ namespace nv
 						Rect childRect = new Rect(rect) { width = width };
 						int depth = element.Copy().depth;
 						do
-						{
-							if (element.depth != depth)
+                        {
+                            if (element.depth != depth)
 								break;
 
 							if (childCount <= 2)
@@ -695,8 +742,13 @@ namespace nv
         {
             if (property.NextVisible(true))
             {
+                bool isInChildProperty = false;
+                bool parentHasSpecialAttribute = false;
+                SerializedProperty parent = property;
+
                 // Remember depth iteration started from
                 int depth = property.Copy().depth;
+                bool hasMore = false;
                 do
                 {
                     // If goes deeper than the iteration depth, get out
@@ -714,10 +766,39 @@ namespace nv
 							continue;
 					}
 
-                    //TODO: make it so this hack isn't needed to work with scriptable lists...
-                    if(!property.HasAttribute<EditScriptableListAttribute>() && (property.name == "size" || property.depth != 1))
-                        DrawPropertySortableArray(property);
-                } while(property.NextVisible(true));
+                    isInChildProperty = !((property == null || property.GetParentProp() == null));
+
+                    if(!isInChildProperty && property != null && property.GetParentProp() == null)
+                    {
+                        parent = property;
+                        parentHasSpecialAttribute = property.HasAttribute<ReorderableAttribute>() 
+                            || property.HasAttribute<EditScriptableAttribute>()
+                            || property.HasAttribute<EditScriptableListAttribute>();
+                        //if(parentHasSpecialAttribute)
+                        //    UnityEngine.Debug.Log("special property" + property.name);
+                    }
+
+                    if(isInChildProperty && !parentHasSpecialAttribute)
+                    {
+                        //UnityEngine.Debug.Log("iterProp.name " + property.name);
+                        //UnityEngine.Debug.Log("parentHasSpecialAttribute " + parentHasSpecialAttribute);
+
+                        //if(!property.HasAttribute<EditScriptableListAttribute>() && (property.name == "size" || property.depth != 1))
+                        //    DrawPropertySortableArray(property);
+
+                        property = parent;
+                        hasMore = property.NextVisible(false);
+                        continue;
+                    }
+                    else
+                    {
+                        //TODO: make it so this hack isn't needed to work with scriptable lists...
+                        if(!property.HasAttribute<EditScriptableListAttribute>() && (property.name == "size" || property.depth != 1))
+                            DrawPropertySortableArray(property);
+
+                        hasMore = property.NextVisible(true);
+                    }
+                } while(hasMore);
             }
 		}
         
@@ -728,9 +809,10 @@ namespace nv
         /// </summary>
         /// <param name="property"></param>
         protected void DrawPropertySortableArray(SerializedProperty property)
-		{
-			// Try to get the sortable list this property belongs to
-			SortableListData listData = null;
+        {
+            //UnityEngine.Debug.Log("rendering " + property.name);
+            // Try to get the sortable list this property belongs to
+            SortableListData listData = null;
 			if (listIndex.Count > 0)
 				listData = listIndex.Find(data => property.propertyPath.StartsWith(data.Parent));
 
@@ -742,8 +824,8 @@ namespace nv
 			{
 				// Try to show the list
 				if (listData.DoLayoutProperty(property) == false)
-				{
-					EditorGUILayout.PropertyField(property, false);
+                {
+                    EditorGUILayout.PropertyField(property, false);
 					if (property.isExpanded)
 					{
 						EditorGUI.indentLevel++;
@@ -771,26 +853,33 @@ namespace nv
 					bool doCreate;
                     List<Type> subclasses = new List<Type>();
                     using (new EditorGUILayout.HorizontalScope())
-					{
-						EditorGUILayout.PropertyField(property, uiExpandWidth);
+                    {
+                        EditorGUILayout.PropertyField(property, uiExpandWidth);
 						using (new EditorGUILayout.VerticalScope(uiWidth50))
                         {
                             using(new EditorGUILayout.HorizontalScope())
                             {
+                                //get all the types that are a subclass of this type
                                 Type propType = property.GetTypeReflection();
                                 subclasses = Assembly.GetAssembly(propType).GetTypes().Where(x => x.IsSubclassOf(propType)).ToList();
+
+                                //remove types that contain generics since unity doesn't support those in the inspector
+                                subclasses = subclasses.Where(x => x.ContainsGenericParameters == false).ToList();
+
+                                //remove abstract types, since create an instance of those doesn't make sense
+                                subclasses = subclasses.Where(x => x.IsAbstract == false).ToList();
 
                                 if(subclasses.Count > 0)
                                 {
                                     string keyname = this.GetType().Name + target.name;
-                                    if(!nv.editor.EditorData.Instance.HasData<int>(keyname, property.propertyPath))
+                                    if(!editor.EditorData.Instance.HasData<int>(keyname, property.propertyPath))
                                     {
-                                        nv.editor.EditorData.Instance.SetData<int>(0, keyname, property.propertyPath);
+                                        editor.EditorData.Instance.SetData<int>(0, keyname, property.propertyPath);
                                     }
 
-                                    int selection = nv.editor.EditorData.Instance.GetData<int>(keyname, property.propertyPath);
+                                    int selection = editor.EditorData.Instance.GetData<int>(keyname, property.propertyPath);
                                     selection = EditorGUILayout.Popup(selection, subclasses.Select(x => x.Name).ToArray());
-                                    nv.editor.EditorData.Instance.SetData<int>(selection, keyname, property.propertyPath);
+                                    editor.EditorData.Instance.SetData<int>(selection, keyname, property.propertyPath);
                                 }
 
                                 if(hasSpace) GUILayout.Space(10);
@@ -805,18 +894,18 @@ namespace nv
                         Type propType = property.GetTypeReflection();
                         if(subclasses.Count > 0)
                         {
-                            int selection = nv.editor.EditorData.Instance.GetData<int>(keyname, property.propertyPath);
+                            int selection = editor.EditorData.Instance.GetData<int>(keyname, property.propertyPath);
                             propType = subclasses[selection];
                         }
 
-                        string pwd = nv.editor.EditorData.Instance.GetData<string>(keyname, property.propertyPath);
+                        string pwd = editor.EditorData.Instance.GetData<string>(keyname, property.propertyPath);
                         if(string.IsNullOrEmpty(pwd))
                             pwd = Application.dataPath;
 
 						var createdAsset = CreateAssetWithSavePrompt(propType, ref pwd);
 						if (createdAsset != null)
 						{
-                            nv.editor.EditorData.Instance.SetData<string>(pwd, keyname, property.propertyPath);
+                            editor.EditorData.Instance.SetData<string>(pwd, keyname, property.propertyPath);
                             property.objectReferenceValue = createdAsset;
 							property.isExpanded = true;
 						}
@@ -824,8 +913,8 @@ namespace nv
 				}
 				// Has data in property, draw foldout and editor
 				else
-				{
-					EditorGUILayout.PropertyField(property);
+                {
+                    EditorGUILayout.PropertyField(property);
 
 					Rect rectFoldout = GUILayoutUtility.GetLastRect();
 					rectFoldout.width = 20;
@@ -836,15 +925,22 @@ namespace nv
 					if (property.isExpanded)
 					{
 						EditorGUI.indentLevel++;
-						using (new EditorGUILayout.VerticalScope(styleEditBox))
-						{
-							var restoreIndent = EditorGUI.indentLevel;
-							EditorGUI.indentLevel = 1;
-							scriptableEditor.serializedObject.Update();
-							scriptableEditor.OnInspectorGUI();
-							scriptableEditor.serializedObject.ApplyModifiedProperties();
-							EditorGUI.indentLevel = restoreIndent;
-						}
+                        try
+                        {
+                            if(styleEditBox == null) 
+                                styleEditBox = new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(5, 5, 5, 5) };
+                            using(new EditorGUILayout.VerticalScope(styleEditBox))
+                            {
+                                var restoreIndent = EditorGUI.indentLevel;
+                                EditorGUI.indentLevel = 1;
+                                scriptableEditor.serializedObject.Update();
+                                scriptableEditor.OnInspectorGUI();
+                                scriptableEditor.serializedObject.ApplyModifiedProperties();
+                                EditorGUI.indentLevel = restoreIndent;
+                            }
+                        }
+                        catch(Exception)
+                        { }
 						EditorGUI.indentLevel--;
 					}
 				}
@@ -856,8 +952,8 @@ namespace nv
 				bool isStartProp = targetProp.propertyPath.StartsWith("m_");
 #if UNITY_5_5_OR_NEWER
                 using (new EditorGUI.DisabledScope(isStartProp))
-				{
-					EditorGUILayout.PropertyField(targetProp, targetProp.isExpanded);
+                {
+                    EditorGUILayout.PropertyField(targetProp, targetProp.isExpanded);
 				}
 #else
 
